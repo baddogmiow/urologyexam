@@ -46,7 +46,13 @@ class VideoScript:
 
     @classmethod
     def from_dict(cls, data: dict) -> "VideoScript":
-        scenes = [Scene(**s) for s in data["scenes"]]
+        # Only pull the fields we need per scene: LLM output occasionally
+        # includes extra/typo'd keys (e.g. a duplicated "narration" key
+        # under a misspelled name) alongside the correct ones.
+        scenes = [
+            Scene(narration=s["narration"], visual_keyword=s["visual_keyword"])
+            for s in data["scenes"]
+        ]
         return cls(
             title=data["title"],
             description=data["description"],
