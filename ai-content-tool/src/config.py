@@ -29,6 +29,8 @@ class Settings:
 
     # "shorts" (60-90s, vertical) or "long" (2-4min, deeper dive)
     script_length: str = field(default_factory=lambda: os.getenv("SCRIPT_LENGTH", "shorts"))
+    # "explainer" (科普/開箱/比較) or "story" (第一人稱敘事/生活趣事,去識別化)
+    script_style: str = field(default_factory=lambda: os.getenv("SCRIPT_STYLE", "explainer"))
 
     pexels_api_key: str = field(default_factory=lambda: os.getenv("PEXELS_API_KEY", ""))
 

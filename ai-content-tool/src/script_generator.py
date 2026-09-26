@@ -34,21 +34,31 @@ _LENGTH_PROFILES = {
 }
 
 
-def _build_system_prompt() -> str:
-    profile = _LENGTH_PROFILES.get(settings.script_length, _LENGTH_PROFILES["shorts"])
-    return f"""你是資深短影音腳本編劇與該主題的領域研究員。收到一個主題後,產出一支 {profile["duration_desc"]}、內容有實質深度的說明/科普/開箱比較類影片腳本(不是空泛的懶人包)。
-只能輸出一個 JSON 物件,格式如下,不要有任何 JSON 以外的文字:
+_JSON_SCHEMA_BLOCK = """只能輸出一個 JSON 物件,格式如下,不要有任何 JSON 以外的文字:
 
 {{
   "title": "吸引點擊但不誇大不實的標題(繁體中文,30字以內)",
-  "description": "影片描述,含2-3個重點與一句免責聲明(內容由AI輔助生成僅供參考)",
+  "description": "影片描述,含2-3個重點{description_extra}",
   "tags": ["關鍵字1", "關鍵字2", "..."],
   "thumbnail_text": "縮圖上要放的短文字(8字以內,吸睛但不腥羶色)",
   "thumbnail_visual_keyword": "用來搜尋縮圖背景照片的英文關鍵字,要能代表整支影片主題",
   "scenes": [
-    {{"narration": "這一幕的旁白逐字稿(繁體中文,{profile["narration_desc"]})", "visual_keyword": "用來找背景圖/影片素材的英文關鍵字"}}
+    {{"narration": "這一幕的旁白逐字稿(繁體中文,{narration_desc})", "visual_keyword": "用來找背景圖/影片素材的英文關鍵字"}}
   ]
-}}
+}}"""
+
+_COMMON_SAFETY_RULES = """- title 和 description 不要出現具體的分鐘數宣稱(例如「3分鐘搞懂」),因為實際影片長度會因配音語速設定而變動,寫死的分鐘數容易跟實際不符。
+- narration 禁止使用任何無法查證的誇大醫療/財務/法律承諾。
+- 不得包含色情、暴力、仇恨、詐騙、抄襲他人受版權保護的原文字句。"""
+
+
+def _build_explainer_prompt(profile: dict) -> str:
+    schema = _JSON_SCHEMA_BLOCK.format(
+        description_extra="與一句免責聲明(內容由AI輔助生成僅供參考)",
+        narration_desc=profile["narration_desc"],
+    )
+    return f"""你是資深短影音腳本編劇與該主題的領域研究員。收到一個主題後,產出一支 {profile["duration_desc"]}、內容有實質深度的說明/科普/開箱比較類影片腳本(不是空泛的懶人包)。
+{schema}
 
 內容深度規則(重要):
 - scenes 陣列要有 {profile["scene_count"]} 個場景,合起來旁白總長度抓 {profile["duration_desc"]} 口語速度。
@@ -57,11 +67,39 @@ def _build_system_prompt() -> str:
 - {profile["structure_rule"]}
 
 其他規則:
-- title 和 description 不要出現具體的分鐘數宣稱(例如「3分鐘搞懂」),因為實際影片長度會因配音語速設定而變動,寫死的分鐘數容易跟實際不符。
-- narration 禁止使用任何無法查證的誇大醫療/財務/法律承諾。
-- 不得包含色情、暴力、仇恨、詐騙、抄襲他人受版權保護的原文字句。
+{_COMMON_SAFETY_RULES}
 - 若主題涉及專業領域(醫療、法律、財務等),於 description 附上「僅供參考,非專業建議」字樣。
 """
+
+
+def _build_story_prompt(profile: dict) -> str:
+    schema = _JSON_SCHEMA_BLOCK.format(
+        description_extra="",
+        narration_desc=profile["narration_desc"] + ",第一人稱、口語、有畫面感",
+    )
+    return f"""你是短影音喜劇/生活觀察系編劇,專門寫醫療從業人員生活的輕鬆敘事短片(像 vlog 說故事,不是知識類影片)。收到一個主題後,產出一支 {profile["duration_desc"]} 的第一人稱敘事短片腳本。
+{schema}
+
+病人隱私與去識別化規則(最高優先,不可違反):
+- 絕對不能描述任何可能被辨識出的真實病人、真實同事、真實醫院/科別名稱,或任何具體病歷/病情細節組合;所有情境一律要「複合虛構化」,設計成很多住院醫師/醫療從業人員都可能遇到的通用共通經驗,不能是某一次特定事件的紀實描述。
+- 不得透露任何可能構成病人隱私的資訊(姓名、病歷號、可辨識的病情細節、日期地點等)。如果原始主題描述中暗示了具體真人真事,一律改寫成通用化、去識別化的情境,絕不照實還原細節。
+- 情節中如果涉及其他醫護人員或主治,一律用去識別化的通稱(例如「值班主治」「學長姐」),不得使用任何可能對應到真實特定人物的稱呼或描述。
+
+敘事風格規則:
+- scenes 陣列要有 {profile["scene_count"]} 個場景,合起來旁白總長度抓 {profile["duration_desc"]} 口語速度。
+- 結構採「鋪陳 -> 事情發展/反差 -> 高潮或抖包袱 -> 收尾感想/金句」,語氣輕鬆自嘲、有畫面感,靠反差或意外製造笑點與同行共鳴,不需要說教或給建議。
+- visual_keyword 用能配合情境氛圍的通用英文關鍵字(例如 hospital hallway night, tired doctor coffee, nurses station busy),不要包含任何可能對應到真實醫院招牌、真實人物的關鍵字。
+
+其他規則:
+{_COMMON_SAFETY_RULES}
+"""
+
+
+def _build_system_prompt() -> str:
+    profile = _LENGTH_PROFILES.get(settings.script_length, _LENGTH_PROFILES["shorts"])
+    if settings.script_style == "story":
+        return _build_story_prompt(profile)
+    return _build_explainer_prompt(profile)
 
 
 @dataclass
