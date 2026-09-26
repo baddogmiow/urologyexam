@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass, asdict, field
 
 from .config import settings
 
@@ -43,7 +43,7 @@ _JSON_SCHEMA_BLOCK = """只能輸出一個 JSON 物件,格式如下,不要有任
   "thumbnail_text": "縮圖上要放的短文字(8字以內,吸睛但不腥羶色)",
   "thumbnail_visual_keyword": "用來搜尋縮圖背景照片的英文關鍵字,要能代表整支影片主題",
   "scenes": [
-    {{"narration": "這一幕的旁白逐字稿(繁體中文,{narration_desc})", "visual_keyword": "用來找背景圖/影片素材的英文關鍵字", "speaker": "說這句話的角色標籤,例如「旁白」「醫師」「病人」,同一支影片裡角色名稱要一致"}}
+    {{"narration": "這一幕的旁白逐字稿(繁體中文,{narration_desc})", "visual_keyword": "用來找背景圖/影片素材的英文關鍵字", "speaker": "說這句話的角色標籤,例如「旁白」「醫師」「病人」,同一支影片裡角色名稱要一致", "sfx": "這一幕要疊加的音效(可省略),只能從這個清單選: boom / ding / guitar / phone / heartbeat / trombone / chime,可以是單一字串或字串陣列"}}
   ]
 }}"""
 
@@ -108,6 +108,7 @@ class Scene:
     narration: str
     visual_keyword: str
     speaker: str = "narrator"
+    sfx: list[str] = field(default_factory=list)
 
 
 def _parse_scene(s: dict) -> Scene:
@@ -117,17 +118,19 @@ def _parse_scene(s: dict) -> Scene:
     not just adds an extra one, so a plain s["narration"] lookup isn't
     reliable. Fall back to whatever other string field is present.
     """
+    reserved_keys = ("visual_keyword", "speaker", "sfx")
     visual_keyword = s.get("visual_keyword", "")
     speaker = s.get("speaker") or "narrator"
+    sfx = s.get("sfx") or []
+    if isinstance(sfx, str):
+        sfx = [sfx]
     narration = s.get("narration")
     if narration is None:
-        candidates = [
-            v for k, v in s.items() if k not in ("visual_keyword", "speaker") and isinstance(v, str)
-        ]
+        candidates = [v for k, v in s.items() if k not in reserved_keys and isinstance(v, str)]
         if not candidates:
             raise ScriptGenerationError(f"場景資料缺少旁白文字: {s}")
         narration = candidates[0]
-    return Scene(narration=narration, visual_keyword=visual_keyword, speaker=speaker)
+    return Scene(narration=narration, visual_keyword=visual_keyword, speaker=speaker, sfx=sfx)
 
 
 @dataclass

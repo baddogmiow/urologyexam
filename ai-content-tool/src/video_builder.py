@@ -163,6 +163,10 @@ def build_video(
     frames_dir = out_path.parent / "frames"
     frames_dir.mkdir(exist_ok=True)
 
+    from . import sfx as sfx_module
+
+    sfx_dir = out_path.parent / "sfx"
+
     clips = []
     for i, (scene, narration) in enumerate(zip(script.scenes, narrations)):
         frame = render_scene_frame(scene.narration, scene.visual_keyword)
@@ -170,7 +174,20 @@ def build_video(
         frame.save(frame_path)
 
         audio_clip = AudioFileClip(str(narration.path))
-        image_clip = ImageClip(str(frame_path)).with_duration(audio_clip.duration).with_audio(audio_clip)
+        combined_audio = audio_clip
+        sfx_clips = []
+        for name in scene.sfx:
+            sfx_path = sfx_module.build_sfx(name, sfx_dir / f"scene_{i:02d}_{name}.wav", sfx_dir)
+            if sfx_path is not None:
+                sfx_clips.append(AudioFileClip(str(sfx_path)))
+        if sfx_clips:
+            combined_audio = CompositeAudioClip([audio_clip, *sfx_clips])
+
+        image_clip = (
+            ImageClip(str(frame_path))
+            .with_duration(combined_audio.duration)
+            .with_audio(combined_audio)
+        )
         clips.append(image_clip)
 
     video = concatenate_videoclips(clips, method="compose")

@@ -1,0 +1,57 @@
+{
+  "title": "半夜叫我開刀,結果是烏龍一場",
+  "description": "值班日常小故事:一場因為材質沒問清楚鬧出的烏龍會診。內容為虛構情境,分享醫療現場的荒謬日常,並非真實病例紀錄,僅供參考。",
+  "tags": ["醫院日常", "值班趣事", "醫療迷因", "急診", "MRI"],
+  "thumbnail_text": "竟然是矽膠做的?!",
+  "thumbnail_visual_keyword": "doctor confused hospital meme",
+  "scenes": [
+    {
+      "speaker": "專科醫師",
+      "narration": "半夜叫我回醫院開刀……說再不來,病人的小弟弟就要變成『飛天小弟弟』了?!",
+      "visual_keyword": "doctor woken up phone call night",
+      "sfx": ["phone", "boom"]
+    },
+    {
+      "speaker": "會診醫師",
+      "narration": "醫師救命!病人脊椎受傷要緊急做核磁共振,但他小弟弟裡面有植入珠珠,怕磁場太強會被吸走,拜託快來幫忙處理!",
+      "visual_keyword": "doctor panicked phone call xray",
+      "sfx": ["heartbeat"]
+    },
+    {
+      "speaker": "專科醫師",
+      "narration": "大哥……你小弟弟裡面裝的那顆珠珠,到底是什麼材質的?",
+      "visual_keyword": "doctor questioning patient bedside gloves",
+      "sfx": []
+    },
+    {
+      "speaker": "病人",
+      "narration": "就……普通的矽膠軟珠啊。",
+      "visual_keyword": "nervous patient reaction",
+      "sfx": ["trombone"]
+    },
+    {
+      "speaker": "專科醫師",
+      "narration": "矽膠……根本沒有金屬,不會被磁鐵吸啦!問一句話就知道的事情啊!",
+      "visual_keyword": "shocked doctor dropping clipboard",
+      "sfx": ["guitar"]
+    },
+    {
+      "speaker": "旁白",
+      "narration": "結果珠珠也沒拿,刀也沒開,病人就這樣直接被推進去做了脊椎核磁共振。",
+      "visual_keyword": "MRI machine scanner room",
+      "sfx": []
+    },
+    {
+      "speaker": "旁白",
+      "narration": "小知識時間:核磁共振原理是一台超級大磁鐵,真正危險的是鐵磁性金屬,像矽膠這種非金屬材質完全不會起反應,根本不用特地開刀取出來。",
+      "visual_keyword": "medical infographic icons education",
+      "sfx": []
+    },
+    {
+      "speaker": "旁白",
+      "narration": "所以做檢查前多問一句材質,就能少走一趟冤枉路!喜歡這種醫院荒謬日常,記得訂閱追蹤我們。",
+      "visual_keyword": "doctor thumbs up subscribe button",
+      "sfx": ["chime"]
+    }
+  ]
+}
