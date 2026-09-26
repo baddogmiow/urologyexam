@@ -1,0 +1,33 @@
+{
+  "title": "急診叫我們拆這個?!",
+  "description": "值班日常小故事:一場因為材質沒問清楚鬧出的烏龍會診。內容為虛構情境,分享醫療現場的荒謬日常,並非真實病例紀錄,僅供參考。",
+  "tags": ["醫院日常", "值班趣事", "醫療迷因", "急診", "MRI"],
+  "thumbnail_text": "竟然是矽膠做的?!",
+  "thumbnail_visual_keyword": "doctor confused hospital meme",
+  "scenes": [
+    {
+      "narration": "什麼?!急診居然叫我們半夜去拆病人身上的入珠,只為了做一個核磁共振?!",
+      "visual_keyword": "emergency room door dramatic night"
+    },
+    {
+      "narration": "電話裡的醫師講得超緊張:「這個很緊急啦,他有入珠不能做MRI,你們快來幫忙移除!」",
+      "visual_keyword": "doctor phone call urgent hospital"
+    },
+    {
+      "narration": "專科醫師走到病人床邊,一臉狐疑地問:「大哥,你這入珠……是什麼材質的啊?」病人弱弱回答:「就……矽膠啊。」",
+      "visual_keyword": "doctor questioning confused patient bedside"
+    },
+    {
+      "narration": "矽膠根本沒有磁性,壓根不用移除啊!結果什麼都沒做,病人就這樣直接被推去做了MRI。",
+      "visual_keyword": "MRI machine scanner room"
+    },
+    {
+      "narration": "小知識時間:核磁共振真正要小心的是「鐵磁性金屬」,像矽膠這類非金屬材質,根本不用大費周章特地移除。",
+      "visual_keyword": "medical infographic icons education"
+    },
+    {
+      "narration": "所以下次要會診之前,拜託先問清楚材質再說吧!喜歡這種醫院荒謬日常,記得訂閱追蹤我們。",
+      "visual_keyword": "doctor thumbs up subscribe button"
+    }
+  ]
+}
