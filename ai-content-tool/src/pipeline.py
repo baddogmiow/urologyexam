@@ -44,6 +44,7 @@ def run_pipeline(
     publish: bool = False,
     bgm_path: Path | None = None,
     script_file: Path | None = None,
+    thumbnail_file: Path | None = None,
 ) -> PipelineResult:
     if script_file:
         print(f"[1/5] 使用手寫腳本: {script_file}")
@@ -73,7 +74,10 @@ def run_pipeline(
     video_path = video_builder.build_video(
         script, narrations, work_dir / "video.mp4", bgm_path=bgm_path
     )
-    thumb_path = thumbnail.build_thumbnail(script, work_dir / "thumbnail.png")
+    if thumbnail_file:
+        thumb_path = thumbnail.use_custom_thumbnail(thumbnail_file, work_dir / "thumbnail.png")
+    else:
+        thumb_path = thumbnail.build_thumbnail(script, work_dir / "thumbnail.png")
 
     result = PipelineResult(
         work_dir=work_dir, script=script, video_path=video_path, thumbnail_path=thumb_path

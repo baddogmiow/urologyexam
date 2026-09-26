@@ -27,6 +27,10 @@ def main() -> None:
         "--script-file", type=str, default=None,
         help="使用手寫腳本 JSON 檔,略過 AI 腳本生成(格式參考 output/*/script.json)",
     )
+    run_p.add_argument(
+        "--thumbnail-file", type=str, default=None,
+        help="使用自訂縮圖圖檔(jpg/png/webp皆可),略過自動生成縮圖",
+    )
 
     sub.add_parser("research", help="只列出目前熱門選題候選,不產生內容")
 
@@ -44,8 +48,13 @@ def main() -> None:
     if args.command == "run":
         bgm_path = Path(args.bgm) if args.bgm else None
         script_file = Path(args.script_file) if args.script_file else None
+        thumbnail_file = Path(args.thumbnail_file) if args.thumbnail_file else None
         result = run_pipeline(
-            topic=args.topic, publish=args.publish, bgm_path=bgm_path, script_file=script_file
+            topic=args.topic,
+            publish=args.publish,
+            bgm_path=bgm_path,
+            script_file=script_file,
+            thumbnail_file=thumbnail_file,
         )
         print("\n完成!輸出目錄:", result.work_dir)
         print("影片:", result.video_path)

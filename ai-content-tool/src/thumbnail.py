@@ -29,6 +29,16 @@ def _accent_color_for(seed: str) -> tuple[int, int, int]:
     return palette[hash(seed) % len(palette)]
 
 
+def use_custom_thumbnail(source_path: Path, out_path: Path) -> Path:
+    """Use a user-supplied image as the thumbnail as-is (format-converted
+    only), instead of generating one from the script.
+    """
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    img = Image.open(source_path).convert("RGB")
+    img.save(out_path)
+    return out_path
+
+
 def build_thumbnail(script: VideoScript, out_path: Path) -> Path:
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
