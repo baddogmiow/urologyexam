@@ -29,6 +29,8 @@ def synthesize_scene(text: str, out_path: Path, lang: str = "zh-TW") -> Narratio
     stem_path = out_path.with_suffix("")
 
     if settings.elevenlabs_api_key and settings.elevenlabs_voice_id:
+        # ElevenLabs supports native speed control (sounds far more natural
+        # than post-hoc time-stretching), so skip the ffmpeg atempo pass.
         final_path = stem_path.with_suffix(".mp3")
         _synthesize_elevenlabs(text, final_path)
     else:
@@ -39,8 +41,8 @@ def synthesize_scene(text: str, out_path: Path, lang: str = "zh-TW") -> Narratio
             final_path = stem_path.with_suffix(".wav")
             _synthesize_pyttsx3(text, final_path)
 
-    if settings.tts_speed != 1.0:
-        final_path = _apply_speed(final_path, settings.tts_speed)
+        if settings.tts_speed != 1.0:
+            final_path = _apply_speed(final_path, settings.tts_speed)
 
     return NarrationClip(path=final_path, duration_sec=_audio_duration(final_path))
 
@@ -52,10 +54,17 @@ def _synthesize_elevenlabs(text: str, out_path: Path) -> None:
         "Content-Type": "application/json",
         "Accept": "audio/mpeg",
     }
+    # ElevenLabs' own "speed" control accepts 0.7-1.2; clamp our (wider)
+    # TTS_SPEED range into it rather than rejecting an out-of-range value.
+    elevenlabs_speed = max(0.7, min(1.2, settings.tts_speed))
     payload = {
         "text": text,
         "model_id": "eleven_multilingual_v2",
-        "voice_settings": {"stability": 0.5, "similarity_boost": 0.75},
+        "voice_settings": {
+            "stability": 0.5,
+            "similarity_boost": 0.75,
+            "speed": elevenlabs_speed,
+        },
     }
     response = requests.post(url, headers=headers, json=payload, timeout=60)
     response.raise_for_status()

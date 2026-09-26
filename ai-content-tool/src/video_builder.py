@@ -52,27 +52,49 @@ def _background_color_for(keyword: str) -> tuple[int, int, int]:
     return (r, g, b)
 
 
+def _cover_resize(img: Image.Image, size: tuple[int, int]) -> Image.Image:
+    """Resize+crop to fill ``size`` without distorting the aspect ratio
+    (like CSS `object-fit: cover`), instead of a naive stretch-to-fit.
+    """
+    target_w, target_h = size
+    src_w, src_h = img.size
+    scale = max(target_w / src_w, target_h / src_h)
+    new_w, new_h = round(src_w * scale), round(src_h * scale)
+    img = img.resize((new_w, new_h))
+    left = (new_w - target_w) // 2
+    top = (new_h - target_h) // 2
+    return img.crop((left, top, left + target_w, top + target_h))
+
+
 def _fetch_pexels_background(keyword: str, size: tuple[int, int]) -> Image.Image | None:
     if not settings.pexels_api_key:
         return None
     try:
         import requests
 
+        width, height = size
+        if width > height:
+            orientation, src_key = "landscape", "landscape"
+        elif width < height:
+            orientation, src_key = "portrait", "portrait"
+        else:
+            orientation, src_key = "square", "medium"
+
         resp = requests.get(
             "https://api.pexels.com/v1/search",
             headers={"Authorization": settings.pexels_api_key},
-            params={"query": keyword, "orientation": "portrait", "per_page": 1},
+            params={"query": keyword, "orientation": orientation, "per_page": 1},
             timeout=15,
         )
         resp.raise_for_status()
         results = resp.json().get("photos", [])
         if not results:
             return None
-        image_url = results[0]["src"]["portrait"]
+        image_url = results[0]["src"][src_key]
         img_resp = requests.get(image_url, timeout=30)
         img_resp.raise_for_status()
         img = Image.open(io.BytesIO(img_resp.content)).convert("RGB")
-        return img.resize(size)
+        return _cover_resize(img, size)
     except Exception:
         return None
 

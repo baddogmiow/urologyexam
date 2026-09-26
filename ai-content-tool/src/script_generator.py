@@ -6,7 +6,7 @@ from dataclasses import dataclass, asdict
 
 from .config import settings
 
-SYSTEM_PROMPT = """你是短影音腳本編劇。收到一個主題後,產出一支 60-120 秒說明/科普類影片的腳本。
+SYSTEM_PROMPT = """你是資深短影音腳本編劇與該主題的領域研究員。收到一個主題後,產出一支 2-4 分鐘、內容有實質深度的說明/科普/開箱比較類影片腳本(不是空泛的懶人包)。
 只能輸出一個 JSON 物件,格式如下,不要有任何 JSON 以外的文字:
 
 {
@@ -14,13 +14,19 @@ SYSTEM_PROMPT = """你是短影音腳本編劇。收到一個主題後,產出一
   "description": "影片描述,含2-3個重點與一句免責聲明(內容由AI輔助生成僅供參考)",
   "tags": ["關鍵字1", "關鍵字2", "..."],
   "thumbnail_text": "縮圖上要放的短文字(8字以內,吸睛但不腥羶色)",
+  "thumbnail_visual_keyword": "用來搜尋縮圖背景照片的英文關鍵字,要能代表整支影片主題",
   "scenes": [
-    {"narration": "這一幕的旁白逐字稿(繁體中文,一兩句話)", "visual_keyword": "用來找背景圖/影片素材的英文關鍵字"}
+    {"narration": "這一幕的旁白逐字稿(繁體中文,可以是三到五句話,資訊量要夠)", "visual_keyword": "用來找背景圖/影片素材的英文關鍵字"}
   ]
 }
 
-規則:
-- scenes 陣列要有 5 到 9 個場景,合起來旁白總長度抓 60-120 秒口語速度。
+內容深度規則(重要):
+- scenes 陣列要有 8 到 14 個場景,每個場景的 narration 要有實質內容,不能只是空泛帶過;合起來旁白總長度抓 2-4 分鐘口語速度。
+- 如果主題適合具體舉例(例如 3C 產品、軟體工具、地點、方法),要點名 2-4 個具體款式/品牌/型號或方案作為例子並比較差異(例如列出不同預算/使用情境各推薦哪一款),而不是只講抽象的選購原則。
+- 具體型號、規格、價格帶用「類別代表例子」的方式呈現(例如「像 XX 系列、YY 系列這類主打輕薄的機型」),並提醒「實際規格與價格請以官網公告與購買當下為準」,避免給出可能已過期的精確報價或型號規格當作保證。
+- 至少安排一個場景比較不同選項的優缺點,一個場景給出依不同需求/預算的具體建議,結尾場景給出明確的行動建議(例如去哪裡比較、注意什麼)。
+
+其他規則:
 - narration 禁止使用任何無法查證的誇大醫療/財務/法律承諾。
 - 不得包含色情、暴力、仇恨、詐騙、抄襲他人受版權保護的原文字句。
 - 若主題涉及專業領域(醫療、法律、財務等),於 description 附上「僅供參考,非專業建議」字樣。
@@ -58,6 +64,7 @@ class VideoScript:
     description: str
     tags: list[str]
     thumbnail_text: str
+    thumbnail_visual_keyword: str
     scenes: list[Scene]
 
     def to_dict(self) -> dict:
@@ -66,11 +73,15 @@ class VideoScript:
     @classmethod
     def from_dict(cls, data: dict) -> "VideoScript":
         scenes = [_parse_scene(s) for s in data["scenes"]]
+        thumbnail_keyword = data.get("thumbnail_visual_keyword") or (
+            scenes[0].visual_keyword if scenes else ""
+        )
         return cls(
             title=data["title"],
             description=data["description"],
             tags=list(data.get("tags", [])),
             thumbnail_text=data.get("thumbnail_text", data["title"][:8]),
+            thumbnail_visual_keyword=thumbnail_keyword,
             scenes=scenes,
         )
 
@@ -103,7 +114,7 @@ def _generate_with_anthropic(topic: str) -> str:
     client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
     message = client.messages.create(
         model="claude-sonnet-5",
-        max_tokens=2000,
+        max_tokens=4000,
         system=SYSTEM_PROMPT,
         messages=[{"role": "user", "content": f"主題:{topic}"}],
     )
@@ -116,6 +127,7 @@ def _generate_with_openai(topic: str) -> str:
     client = OpenAI(api_key=settings.openai_api_key)
     completion = client.chat.completions.create(
         model="gpt-4o-mini",
+        max_tokens=4000,
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": f"主題:{topic}"},
