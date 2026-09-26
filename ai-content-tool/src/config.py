@@ -16,6 +16,7 @@ class Settings:
 
     elevenlabs_api_key: str = field(default_factory=lambda: os.getenv("ELEVENLABS_API_KEY", ""))
     elevenlabs_voice_id: str = field(default_factory=lambda: os.getenv("ELEVENLABS_VOICE_ID", ""))
+    tts_speed: float = field(default_factory=lambda: float(os.getenv("TTS_SPEED", "1.15")))
 
     youtube_client_secret_file: str = field(
         default_factory=lambda: os.getenv("YOUTUBE_CLIENT_SECRET_FILE", "client_secret.json")

@@ -5,6 +5,7 @@ Provider priority: ElevenLabs (best quality, needs paid API key) -> gTTS
 """
 from __future__ import annotations
 
+import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -37,6 +38,9 @@ def synthesize_scene(text: str, out_path: Path, lang: str = "zh-TW") -> Narratio
         except Exception:
             final_path = stem_path.with_suffix(".wav")
             _synthesize_pyttsx3(text, final_path)
+
+    if settings.tts_speed != 1.0:
+        final_path = _apply_speed(final_path, settings.tts_speed)
 
     return NarrationClip(path=final_path, duration_sec=_audio_duration(final_path))
 
@@ -75,6 +79,22 @@ def _synthesize_pyttsx3(text: str, out_path: Path) -> None:
     engine = pyttsx3.init()
     engine.save_to_file(text, str(out_path))
     engine.runAndWait()
+
+
+def _apply_speed(path: Path, speed: float) -> Path:
+    """Speed up (or slow down) narration audio without shifting its pitch,
+    via ffmpeg's atempo filter. Valid single-filter range is 0.5-2.0, which
+    comfortably covers normal narration speed-up use cases.
+    """
+    sped_path = path.with_name(f"{path.stem}_sped{path.suffix}")
+    subprocess.run(
+        ["ffmpeg", "-y", "-i", str(path), "-filter:a", f"atempo={speed}", str(sped_path)],
+        check=True,
+        capture_output=True,
+    )
+    path.unlink()
+    sped_path.rename(path)
+    return path
 
 
 def _audio_duration(path: Path) -> float:
