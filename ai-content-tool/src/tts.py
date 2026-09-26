@@ -20,10 +20,17 @@ class NarrationClip:
     duration_sec: float
 
 
-def synthesize_scene(text: str, out_path: Path, lang: str = "zh-TW") -> NarrationClip:
+def synthesize_scene(
+    text: str, out_path: Path, lang: str = "zh-TW", speaker: str = "narrator"
+) -> NarrationClip:
     """Synthesize ``text`` to speech. ``out_path`` should have no suffix or
     an .mp3 suffix; the actual file written may end in .wav instead when the
     offline pyttsx3 fallback is used, and the real path is returned.
+
+    ``speaker`` lets a multi-role script (narrator/doctor/patient, ...) sound
+    like different voices: with ElevenLabs configured via ELEVENLABS_VOICE_MAP,
+    each speaker gets its own real voice; otherwise the single gTTS/pyttsx3
+    voice is pitch-shifted per speaker as a free approximation.
     """
     out_path.parent.mkdir(parents=True, exist_ok=True)
     stem_path = out_path.with_suffix("")
@@ -32,7 +39,8 @@ def synthesize_scene(text: str, out_path: Path, lang: str = "zh-TW") -> Narratio
         # ElevenLabs supports native speed control (sounds far more natural
         # than post-hoc time-stretching), so skip the ffmpeg atempo pass.
         final_path = stem_path.with_suffix(".mp3")
-        _synthesize_elevenlabs(text, final_path)
+        voice_id = settings.elevenlabs_voice_map.get(speaker, settings.elevenlabs_voice_id)
+        _synthesize_elevenlabs(text, final_path, voice_id=voice_id)
     else:
         try:
             final_path = stem_path.with_suffix(".mp3")
@@ -44,11 +52,28 @@ def synthesize_scene(text: str, out_path: Path, lang: str = "zh-TW") -> Narratio
         if settings.tts_speed != 1.0:
             final_path = _apply_speed(final_path, settings.tts_speed)
 
+        pitch = _pitch_semitones_for_speaker(speaker)
+        if pitch != 0:
+            final_path = _apply_pitch_shift(final_path, pitch)
+
     return NarrationClip(path=final_path, duration_sec=_audio_duration(final_path))
 
 
-def _synthesize_elevenlabs(text: str, out_path: Path) -> None:
-    url = f"https://api.elevenlabs.io/v1/text-to-speech/{settings.elevenlabs_voice_id}"
+_KNOWN_SPEAKER_PITCH = {
+    "narrator": 0,
+    "旁白": 0,
+}
+_PITCH_POOL = [-5, 4, -3, 6, -7, 2]  # semitones; cycled for speakers not listed above
+
+
+def _pitch_semitones_for_speaker(speaker: str) -> int:
+    if speaker in _KNOWN_SPEAKER_PITCH:
+        return _KNOWN_SPEAKER_PITCH[speaker]
+    return _PITCH_POOL[hash(speaker) % len(_PITCH_POOL)]
+
+
+def _synthesize_elevenlabs(text: str, out_path: Path, voice_id: str) -> None:
+    url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
     headers = {
         "xi-api-key": settings.elevenlabs_api_key,
         "Content-Type": "application/json",
@@ -103,6 +128,40 @@ def _apply_speed(path: Path, speed: float) -> Path:
     )
     path.unlink()
     sped_path.rename(path)
+    return path
+
+
+def _get_sample_rate(path: Path) -> int:
+    result = subprocess.run(
+        [
+            "ffprobe", "-v", "error", "-select_streams", "a:0",
+            "-show_entries", "stream=sample_rate",
+            "-of", "default=noprint_wrappers=1:nokey=1", str(path),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return int(result.stdout.strip())
+
+
+def _apply_pitch_shift(path: Path, semitones: int) -> Path:
+    """Shift pitch by ``semitones`` while keeping duration the same, via the
+    classic asetrate+atempo trick (works with any ffmpeg build, no extra
+    filters required). Used as a free stand-in for distinct character voices
+    when only a single TTS voice (gTTS/pyttsx3) is available.
+    """
+    ratio = 2 ** (semitones / 12)
+    input_rate = _get_sample_rate(path)
+    pitched_path = path.with_name(f"{path.stem}_pitched{path.suffix}")
+    filter_str = f"asetrate={input_rate * ratio},aresample={input_rate},atempo={1 / ratio}"
+    subprocess.run(
+        ["ffmpeg", "-y", "-i", str(path), "-filter:a", filter_str, str(pitched_path)],
+        check=True,
+        capture_output=True,
+    )
+    path.unlink()
+    pitched_path.rename(path)
     return path
 
 

@@ -16,6 +16,15 @@ class Settings:
 
     elevenlabs_api_key: str = field(default_factory=lambda: os.getenv("ELEVENLABS_API_KEY", ""))
     elevenlabs_voice_id: str = field(default_factory=lambda: os.getenv("ELEVENLABS_VOICE_ID", ""))
+    # Optional per-speaker voice override, e.g. "旁白:id1,病人:id2"; falls back
+    # to elevenlabs_voice_id for any speaker not listed here.
+    elevenlabs_voice_map: dict[str, str] = field(
+        default_factory=lambda: dict(
+            pair.split(":", 1)
+            for pair in os.getenv("ELEVENLABS_VOICE_MAP", "").split(",")
+            if ":" in pair
+        )
+    )
     tts_speed: float = field(default_factory=lambda: float(os.getenv("TTS_SPEED", "1.3")))
 
     youtube_client_secret_file: str = field(

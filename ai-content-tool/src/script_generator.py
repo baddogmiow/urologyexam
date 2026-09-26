@@ -43,7 +43,7 @@ _JSON_SCHEMA_BLOCK = """只能輸出一個 JSON 物件,格式如下,不要有任
   "thumbnail_text": "縮圖上要放的短文字(8字以內,吸睛但不腥羶色)",
   "thumbnail_visual_keyword": "用來搜尋縮圖背景照片的英文關鍵字,要能代表整支影片主題",
   "scenes": [
-    {{"narration": "這一幕的旁白逐字稿(繁體中文,{narration_desc})", "visual_keyword": "用來找背景圖/影片素材的英文關鍵字"}}
+    {{"narration": "這一幕的旁白逐字稿(繁體中文,{narration_desc})", "visual_keyword": "用來找背景圖/影片素材的英文關鍵字", "speaker": "說這句話的角色標籤,例如「旁白」「醫師」「病人」,同一支影片裡角色名稱要一致"}}
   ]
 }}"""
 
@@ -88,6 +88,7 @@ def _build_story_prompt(profile: dict) -> str:
 敘事風格規則:
 - scenes 陣列要有 {profile["scene_count"]} 個場景,合起來旁白總長度抓 {profile["duration_desc"]} 口語速度。
 - 結構採「鋪陳 -> 事情發展/反差 -> 高潮或抖包袱 -> 收尾感想/金句」,語氣輕鬆自嘲、有畫面感,靠反差或意外製造笑點與同行共鳴,不需要說教或給建議。
+- 如果劇情有對白(例如兩人對話),每個場景的 speaker 要標成說話的那個角色(例如「旁白」「醫師」「病人」),同一部影片裡同一個角色的 speaker 名稱要完全一致,才能讓配音套用一致的音調。
 - visual_keyword 用能配合情境氛圍的通用英文關鍵字(例如 hospital hallway night, tired doctor coffee, nurses station busy),不要包含任何可能對應到真實醫院招牌、真實人物的關鍵字。
 
 其他規則:
@@ -106,6 +107,7 @@ def _build_system_prompt() -> str:
 class Scene:
     narration: str
     visual_keyword: str
+    speaker: str = "narrator"
 
 
 def _parse_scene(s: dict) -> Scene:
@@ -116,15 +118,16 @@ def _parse_scene(s: dict) -> Scene:
     reliable. Fall back to whatever other string field is present.
     """
     visual_keyword = s.get("visual_keyword", "")
+    speaker = s.get("speaker") or "narrator"
     narration = s.get("narration")
     if narration is None:
         candidates = [
-            v for k, v in s.items() if k != "visual_keyword" and isinstance(v, str)
+            v for k, v in s.items() if k not in ("visual_keyword", "speaker") and isinstance(v, str)
         ]
         if not candidates:
             raise ScriptGenerationError(f"場景資料缺少旁白文字: {s}")
         narration = candidates[0]
-    return Scene(narration=narration, visual_keyword=visual_keyword)
+    return Scene(narration=narration, visual_keyword=visual_keyword, speaker=speaker)
 
 
 @dataclass

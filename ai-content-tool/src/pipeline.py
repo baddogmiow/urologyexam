@@ -67,7 +67,9 @@ def run_pipeline(
     print(f"[3/5] 產生 {len(script.scenes)} 段旁白語音...")
     narrations = []
     for i, scene in enumerate(script.scenes):
-        clip = tts.synthesize_scene(scene.narration, work_dir / "audio" / f"scene_{i:02d}")
+        clip = tts.synthesize_scene(
+            scene.narration, work_dir / "audio" / f"scene_{i:02d}", speaker=scene.speaker
+        )
         narrations.append(clip)
 
     print("[4/5] 剪輯影片...")
