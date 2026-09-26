@@ -23,6 +23,10 @@ def main() -> None:
     run_p.add_argument("--topic", type=str, default=None, help="手動指定主題;不填則自動抓熱門關鍵字")
     run_p.add_argument("--publish", action="store_true", help="產出後自動上傳到 YouTube")
     run_p.add_argument("--bgm", type=str, default=None, help="背景音樂檔路徑 (mp3/wav)")
+    run_p.add_argument(
+        "--script-file", type=str, default=None,
+        help="使用手寫腳本 JSON 檔,略過 AI 腳本生成(格式參考 output/*/script.json)",
+    )
 
     sub.add_parser("research", help="只列出目前熱門選題候選,不產生內容")
 
@@ -39,7 +43,10 @@ def main() -> None:
 
     if args.command == "run":
         bgm_path = Path(args.bgm) if args.bgm else None
-        result = run_pipeline(topic=args.topic, publish=args.publish, bgm_path=bgm_path)
+        script_file = Path(args.script_file) if args.script_file else None
+        result = run_pipeline(
+            topic=args.topic, publish=args.publish, bgm_path=bgm_path, script_file=script_file
+        )
         print("\n完成!輸出目錄:", result.work_dir)
         print("影片:", result.video_path)
         print("縮圖:", result.thumbnail_path)

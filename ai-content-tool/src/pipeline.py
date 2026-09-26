@@ -43,12 +43,19 @@ def run_pipeline(
     topic: str | None,
     publish: bool = False,
     bgm_path: Path | None = None,
+    script_file: Path | None = None,
 ) -> PipelineResult:
-    chosen_topic = pick_topic(topic)
-    print(f"[1/5] 主題: {chosen_topic}")
+    if script_file:
+        print(f"[1/5] 使用手寫腳本: {script_file}")
+        print("[2/5] 略過 AI 腳本生成")
+        data = json.loads(script_file.read_text(encoding="utf-8"))
+        script = VideoScript.from_dict(data)
+    else:
+        chosen_topic = pick_topic(topic)
+        print(f"[1/5] 主題: {chosen_topic}")
 
-    print("[2/5] 產生腳本...")
-    script = script_generator.generate_script(chosen_topic)
+        print("[2/5] 產生腳本...")
+        script = script_generator.generate_script(chosen_topic)
 
     work_dir = settings.output_dir / slugify(script.title)
     work_dir.mkdir(parents=True, exist_ok=True)
