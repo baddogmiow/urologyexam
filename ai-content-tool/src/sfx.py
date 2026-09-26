@@ -8,91 +8,58 @@ comedic stingers without that risk.
 """
 from __future__ import annotations
 
-import subprocess
 from pathlib import Path
 
-_SR = 44100
-
-
-def _tone(out_path: Path, freq: float, duration: float, decay: float, amp: float = 0.8) -> None:
-    expr = f"{amp}*sin(2*PI*{freq}*t)*exp(-{decay}*t)"
-    subprocess.run(
-        ["ffmpeg", "-y", "-f", "lavfi", "-i", f"aevalsrc={expr}:s={_SR}:d={duration}", str(out_path)],
-        check=True,
-        capture_output=True,
-    )
-
-
-def _silence(out_path: Path, duration: float) -> None:
-    subprocess.run(
-        [
-            "ffmpeg", "-y", "-f", "lavfi", "-i", f"anullsrc=r={_SR}:cl=mono",
-            "-t", str(duration), str(out_path),
-        ],
-        check=True,
-        capture_output=True,
-    )
-
-
-def _concat(parts: list[Path], out_path: Path) -> Path:
-    from moviepy import AudioFileClip, concatenate_audioclips
-
-    clips = [AudioFileClip(str(p)) for p in parts]
-    final = concatenate_audioclips(clips)
-    final.write_audiofile(str(out_path), fps=_SR, logger=None)
-    for c in clips:
-        c.close()
-    final.close()
-    return out_path
+from .audio_synth import concat, silence, tone
 
 
 def _build_boom(out_path: Path, tmp_dir: Path) -> Path:
-    _tone(out_path, freq=75, duration=0.5, decay=9, amp=0.95)
+    tone(out_path, freq=75, duration=0.5, decay=9, amp=0.95)
     return out_path
 
 
 def _build_ding(out_path: Path, tmp_dir: Path) -> Path:
-    _tone(out_path, freq=1300, duration=0.45, decay=5, amp=0.6)
+    tone(out_path, freq=1300, duration=0.45, decay=5, amp=0.6)
     return out_path
 
 
 def _build_guitar(out_path: Path, tmp_dir: Path) -> Path:
-    _tone(out_path, freq=1400, duration=0.35, decay=6, amp=0.7)
+    tone(out_path, freq=1400, duration=0.35, decay=6, amp=0.7)
     return out_path
 
 
 def _build_phone(out_path: Path, tmp_dir: Path) -> Path:
     on1, off1, on2 = tmp_dir / "phone_on1.wav", tmp_dir / "phone_off1.wav", tmp_dir / "phone_on2.wav"
-    _tone(on1, freq=440, duration=0.35, decay=0.3, amp=0.5)
-    _silence(off1, 0.25)
-    _tone(on2, freq=440, duration=0.35, decay=0.3, amp=0.5)
-    return _concat([on1, off1, on2], out_path)
+    tone(on1, freq=440, duration=0.35, decay=0.3, amp=0.5)
+    silence(off1, 0.25)
+    tone(on2, freq=440, duration=0.35, decay=0.3, amp=0.5)
+    return concat([on1, off1, on2], out_path)
 
 
 def _build_heartbeat(out_path: Path, tmp_dir: Path) -> Path:
     lub, gap1 = tmp_dir / "hb_lub.wav", tmp_dir / "hb_gap1.wav"
     dub, gap2 = tmp_dir / "hb_dub.wav", tmp_dir / "hb_gap2.wav"
-    _tone(lub, freq=60, duration=0.18, decay=14, amp=0.9)
-    _silence(gap1, 0.15)
-    _tone(dub, freq=55, duration=0.18, decay=14, amp=0.8)
-    _silence(gap2, 0.5)
-    return _concat([lub, gap1, dub, gap2], out_path)
+    tone(lub, freq=60, duration=0.18, decay=14, amp=0.9)
+    silence(gap1, 0.15)
+    tone(dub, freq=55, duration=0.18, decay=14, amp=0.8)
+    silence(gap2, 0.5)
+    return concat([lub, gap1, dub, gap2], out_path)
 
 
 def _build_trombone(out_path: Path, tmp_dir: Path) -> Path:
     parts = []
     for i, f in enumerate([300, 260, 220, 180]):
         p = tmp_dir / f"trom_{i}.wav"
-        _tone(p, freq=f, duration=0.22, decay=3, amp=0.55)
+        tone(p, freq=f, duration=0.22, decay=3, amp=0.55)
         parts.append(p)
-    return _concat(parts, out_path)
+    return concat(parts, out_path)
 
 
 def _build_chime(out_path: Path, tmp_dir: Path) -> Path:
     a, b = tmp_dir / "chime_a.wav", tmp_dir / "chime_b.wav"
-    _tone(a, freq=880, duration=0.25, decay=5, amp=0.6)
-    _tone(b, freq=1320, duration=0.35, decay=4, amp=0.6)
-    return _concat([a, b], out_path)
+    tone(a, freq=880, duration=0.25, decay=5, amp=0.6)
+    tone(b, freq=1320, duration=0.35, decay=4, amp=0.6)
+    return concat([a, b], out_path)
 
 
 SFX_LIBRARY = {

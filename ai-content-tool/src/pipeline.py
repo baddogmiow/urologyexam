@@ -6,6 +6,7 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+from . import bgm as bgm_module
 from . import script_generator, thumbnail, tts, video_builder
 from .config import settings
 from .script_generator import VideoScript
@@ -43,6 +44,7 @@ def run_pipeline(
     topic: str | None,
     publish: bool = False,
     bgm_path: Path | None = None,
+    bgm_preset: str | None = None,
     script_file: Path | None = None,
     thumbnail_file: Path | None = None,
 ) -> PipelineResult:
@@ -71,6 +73,14 @@ def run_pipeline(
             scene.narration, work_dir / "audio" / f"scene_{i:02d}", speaker=scene.speaker
         )
         narrations.append(clip)
+
+    if bgm_preset and not bgm_path:
+        bgm_path = bgm_module.build_bgm_preset(
+            bgm_preset, work_dir / "bgm" / f"{bgm_preset}.wav", work_dir / "bgm"
+        )
+        if bgm_path is None:
+            available = ", ".join(bgm_module.BGM_PRESETS)
+            raise SystemExit(f"找不到內建配樂 '{bgm_preset}',可用選項: {available}")
 
     print("[4/5] 剪輯影片...")
     video_path = video_builder.build_video(
