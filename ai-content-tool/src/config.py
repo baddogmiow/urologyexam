@@ -27,6 +27,9 @@ class Settings:
 
     trends_region: str = field(default_factory=lambda: os.getenv("TRENDS_REGION", "TW"))
 
+    # "shorts" (60-90s, vertical) or "long" (2-4min, deeper dive)
+    script_length: str = field(default_factory=lambda: os.getenv("SCRIPT_LENGTH", "shorts"))
+
     pexels_api_key: str = field(default_factory=lambda: os.getenv("PEXELS_API_KEY", ""))
 
     output_dir: Path = ROOT_DIR / "output"
