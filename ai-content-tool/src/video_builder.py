@@ -127,7 +127,7 @@ def build_video(
     out_path: Path,
     bgm_path: Path | None = None,
 ) -> Path:
-    from moviepy.editor import (
+    from moviepy import (
         AudioFileClip,
         CompositeAudioClip,
         ImageClip,
@@ -148,20 +148,20 @@ def build_video(
         frame.save(frame_path)
 
         audio_clip = AudioFileClip(str(narration.path))
-        image_clip = ImageClip(str(frame_path)).set_duration(audio_clip.duration).set_audio(audio_clip)
+        image_clip = ImageClip(str(frame_path)).with_duration(audio_clip.duration).with_audio(audio_clip)
         clips.append(image_clip)
 
     video = concatenate_videoclips(clips, method="compose")
 
     if bgm_path and bgm_path.exists():
-        bgm = AudioFileClip(str(bgm_path)).volumex(0.08)
+        bgm = AudioFileClip(str(bgm_path)).with_volume_scaled(0.08)
         if bgm.duration < video.duration:
             loops = int(video.duration // bgm.duration) + 1
-            from moviepy.editor import concatenate_audioclips
+            from moviepy import concatenate_audioclips
 
             bgm = concatenate_audioclips([bgm] * loops)
-        bgm = bgm.subclip(0, video.duration)
-        video = video.set_audio(CompositeAudioClip([video.audio, bgm]))
+        bgm = bgm.subclipped(0, video.duration)
+        video = video.with_audio(CompositeAudioClip([video.audio, bgm]))
 
     video.write_videofile(
         str(out_path),

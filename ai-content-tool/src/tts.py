@@ -78,7 +78,7 @@ def _synthesize_pyttsx3(text: str, out_path: Path) -> None:
 
 
 def _audio_duration(path: Path) -> float:
-    from moviepy.editor import AudioFileClip
+    from moviepy import AudioFileClip
 
     clip = AudioFileClip(str(path))
     try:

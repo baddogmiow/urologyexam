@@ -33,6 +33,25 @@ class Scene:
     visual_keyword: str
 
 
+def _parse_scene(s: dict) -> Scene:
+    """Build a Scene from one LLM-generated scene dict.
+
+    The LLM occasionally typos the "narration" key itself (e.g. "narician"),
+    not just adds an extra one, so a plain s["narration"] lookup isn't
+    reliable. Fall back to whatever other string field is present.
+    """
+    visual_keyword = s.get("visual_keyword", "")
+    narration = s.get("narration")
+    if narration is None:
+        candidates = [
+            v for k, v in s.items() if k != "visual_keyword" and isinstance(v, str)
+        ]
+        if not candidates:
+            raise ScriptGenerationError(f"場景資料缺少旁白文字: {s}")
+        narration = candidates[0]
+    return Scene(narration=narration, visual_keyword=visual_keyword)
+
+
 @dataclass
 class VideoScript:
     title: str
@@ -46,13 +65,7 @@ class VideoScript:
 
     @classmethod
     def from_dict(cls, data: dict) -> "VideoScript":
-        # Only pull the fields we need per scene: LLM output occasionally
-        # includes extra/typo'd keys (e.g. a duplicated "narration" key
-        # under a misspelled name) alongside the correct ones.
-        scenes = [
-            Scene(narration=s["narration"], visual_keyword=s["visual_keyword"])
-            for s in data["scenes"]
-        ]
+        scenes = [_parse_scene(s) for s in data["scenes"]]
         return cls(
             title=data["title"],
             description=data["description"],
