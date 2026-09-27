@@ -5,6 +5,7 @@ Provider priority: ElevenLabs (best quality, needs paid API key) -> gTTS
 """
 from __future__ import annotations
 
+import hashlib
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
@@ -21,7 +22,11 @@ class NarrationClip:
 
 
 def synthesize_scene(
-    text: str, out_path: Path, lang: str = "zh-TW", speaker: str = "narrator"
+    text: str,
+    out_path: Path,
+    lang: str = "zh-TW",
+    speaker: str = "narrator",
+    pitch_map: dict[str, int] | None = None,
 ) -> NarrationClip:
     """Synthesize ``text`` to speech. ``out_path`` should have no suffix or
     an .mp3 suffix; the actual file written may end in .wav instead when the
@@ -30,7 +35,9 @@ def synthesize_scene(
     ``speaker`` lets a multi-role script (narrator/doctor/patient, ...) sound
     like different voices: with ElevenLabs configured via ELEVENLABS_VOICE_MAP,
     each speaker gets its own real voice; otherwise the single gTTS/pyttsx3
-    voice is pitch-shifted per speaker as a free approximation.
+    voice is pitch-shifted per speaker as a free approximation. Pass
+    ``pitch_map`` (from ``assign_speaker_pitches``) so distinct speakers in
+    the same script never collide on the same pitch by hash coincidence.
     """
     out_path.parent.mkdir(parents=True, exist_ok=True)
     stem_path = out_path.with_suffix("")
@@ -52,7 +59,11 @@ def synthesize_scene(
         if settings.tts_speed != 1.0:
             final_path = _apply_speed(final_path, settings.tts_speed)
 
-        pitch = _pitch_semitones_for_speaker(speaker)
+        pitch = (
+            pitch_map.get(speaker, 0)
+            if pitch_map is not None
+            else _pitch_semitones_for_speaker(speaker)
+        )
         if pitch != 0:
             final_path = _apply_pitch_shift(final_path, pitch)
 
@@ -63,13 +74,43 @@ _KNOWN_SPEAKER_PITCH = {
     "narrator": 0,
     "旁白": 0,
 }
-_PITCH_POOL = [-5, 4, -3, 6, -7, 2]  # semitones; cycled for speakers not listed above
+_PITCH_POOL = [-5, 4, -3, 6, -7, 2, 8, -9, 9, -2]  # semitones
 
 
 def _pitch_semitones_for_speaker(speaker: str) -> int:
+    """Legacy per-label lookup (kept for callers that don't pass a
+    pitch_map). Two different speakers CAN collide on the same pitch here
+    since each label is hashed independently - prefer assign_speaker_pitches
+    when you have the full scene list up front.
+    """
     if speaker in _KNOWN_SPEAKER_PITCH:
         return _KNOWN_SPEAKER_PITCH[speaker]
-    return _PITCH_POOL[hash(speaker) % len(_PITCH_POOL)]
+    digest = hashlib.md5(speaker.encode("utf-8")).hexdigest()
+    return _PITCH_POOL[int(digest, 16) % len(_PITCH_POOL)]
+
+
+def assign_speaker_pitches(speakers: list[str]) -> dict[str, int]:
+    """Assign each distinct speaker (in first-appearance order) a unique
+    pitch offset, so two different characters never sound identical by
+    hash coincidence. narrator/旁白 always keep 0 (unshifted).
+    """
+    mapping: dict[str, int] = {}
+    available = list(_PITCH_POOL)
+    for s in speakers:
+        if s in mapping:
+            continue
+        if s in _KNOWN_SPEAKER_PITCH:
+            mapping[s] = _KNOWN_SPEAKER_PITCH[s]
+            continue
+        digest = hashlib.md5(s.encode("utf-8")).hexdigest()
+        if available:
+            idx = int(digest, 16) % len(available)
+            mapping[s] = available.pop(idx)
+        else:
+            # More distinct characters than pool slots (unlikely for a short
+            # skit) - fall back to a possible collision rather than erroring.
+            mapping[s] = _PITCH_POOL[int(digest, 16) % len(_PITCH_POOL)]
+    return mapping
 
 
 def _synthesize_elevenlabs(text: str, out_path: Path, voice_id: str) -> None:

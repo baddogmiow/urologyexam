@@ -67,10 +67,14 @@ def run_pipeline(
     )
 
     print(f"[3/5] 產生 {len(script.scenes)} 段旁白語音...")
+    pitch_map = tts.assign_speaker_pitches([scene.speaker for scene in script.scenes])
     narrations = []
     for i, scene in enumerate(script.scenes):
         clip = tts.synthesize_scene(
-            scene.narration, work_dir / "audio" / f"scene_{i:02d}", speaker=scene.speaker
+            scene.narration,
+            work_dir / "audio" / f"scene_{i:02d}",
+            speaker=scene.speaker,
+            pitch_map=pitch_map,
         )
         narrations.append(clip)
 

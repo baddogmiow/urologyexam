@@ -5,6 +5,7 @@ instead of a flat solid/gradient background.
 """
 from __future__ import annotations
 
+import hashlib
 import textwrap
 from pathlib import Path
 
@@ -26,7 +27,10 @@ def _accent_color_for(seed: str) -> tuple[int, int, int]:
         (76, 175, 80),
         (156, 39, 176),
     ]
-    return palette[hash(seed) % len(palette)]
+    # Python's built-in hash() is per-process randomized, which would pick
+    # a different accent color for the same title on every run.
+    digest = hashlib.md5(seed.encode("utf-8")).hexdigest()
+    return palette[int(digest, 16) % len(palette)]
 
 
 def use_custom_thumbnail(source_path: Path, out_path: Path) -> Path:
