@@ -1,15 +1,19 @@
-"""Built-in, fully-synthesized looping background music beds.
+"""Built-in looping background music presets.
 
-Same reasoning as sfx.py: original sine-tone synthesis, not sampled or
-licensed music, so there's no copyright/licensing question to sort out.
-Each preset renders a short melodic loop; video_builder's existing bgm
-handling already loops whatever track is shorter than the video.
+With FREESOUND_API_KEY configured, each preset first tries to fetch a
+real, loopable CC-licensed track from Freesound.org (cached locally);
+otherwise it falls back to a short synthesized melodic loop built from
+scratch with ffmpeg - not licensed/sampled music, so there's nothing to
+clear rights on. video_builder's existing bgm handling already loops
+whatever track is shorter than the video.
 """
 from __future__ import annotations
 
 from pathlib import Path
 
+from . import freesound_client
 from .audio_synth import concat, silence, tone
+from .config import settings
 
 # Note -> frequency (Hz), standard equal temperament.
 _NOTE_FREQ = {
@@ -55,17 +59,65 @@ def _build_quirky(out_path: Path, tmp_dir: Path) -> Path:
 
 
 BGM_PRESETS = {
-    "upbeat": _build_upbeat,   # 歡快知識節目 / CTA 收尾
+    "upbeat": _build_upbeat,   # 輕快/歡快知識節目 / CTA 收尾
     "tense": _build_tense,     # 緊張懸疑段落
     "quirky": _build_quirky,   # 輕鬆搞笑日常
 }
 
+# Search queries tried on Freesound before falling back to synthesis.
+BGM_QUERY_MAP = {
+    "upbeat": "upbeat happy ukulele loop",
+    "tense": "tense suspense drone loop",
+    "quirky": "quirky comedy loop",
+}
 
-def build_bgm_preset(name: str, out_path: Path, tmp_dir: Path) -> Path | None:
-    """Build the named background loop to ``out_path``, or None if unknown."""
-    builder = BGM_PRESETS.get(name)
-    if builder is None:
+_CACHE_DIR = Path(__file__).resolve().parent.parent / "assets" / "bgm_cache"
+
+
+def build_bgm_preset(name: str, out_path: Path, tmp_dir: Path) -> tuple[Path, dict | None] | None:
+    """Build/fetch the named background loop to ``out_path``.
+
+    Returns (path, attribution), where attribution is None for the
+    synthesized fallback or a CC0 Freesound result (no credit required),
+    and a dict for an Attribution-licensed Freesound result. Returns None
+    if ``name`` isn't a recognized preset at all.
+    """
+    if name not in BGM_PRESETS:
         return None
     out_path.parent.mkdir(parents=True, exist_ok=True)
     tmp_dir.mkdir(parents=True, exist_ok=True)
-    return builder(out_path, tmp_dir)
+
+    if settings.freesound_api_key:
+        cached = _CACHE_DIR / f"{name}.mp3"
+        if cached.exists():
+            return cached, _cached_attribution(name)
+        result = freesound_client.search_and_download(
+            BGM_QUERY_MAP[name], cached, min_duration=8.0, max_duration=60.0
+        )
+        if result is not None:
+            _save_cached_attribution(name, result)
+            attribution = None if freesound_client.is_cc0(result["license"]) else result
+            return cached, attribution
+
+    BGM_PRESETS[name](out_path, tmp_dir)
+    return out_path, None
+
+
+def _attribution_cache_file(name: str) -> Path:
+    return _CACHE_DIR / f"{name}.attribution.json"
+
+
+def _cached_attribution(name: str) -> dict | None:
+    import json
+
+    f = _attribution_cache_file(name)
+    if not f.exists():
+        return None
+    data = json.loads(f.read_text(encoding="utf-8"))
+    return None if freesound_client.is_cc0(data["license"]) else data
+
+
+def _save_cached_attribution(name: str, result: dict) -> None:
+    import json
+
+    _attribution_cache_file(name).write_text(json.dumps(result, ensure_ascii=False), encoding="utf-8")

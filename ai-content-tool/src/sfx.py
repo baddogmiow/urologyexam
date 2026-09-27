@@ -1,16 +1,19 @@
-"""A small library of synthesized sound-effect stingers.
+"""A small library of sound-effect stingers.
 
-These are generated from scratch with ffmpeg's audio synthesis (sine tones
-with an exponential decay envelope), not sampled from any existing meme
-audio - viral clips like "Vine Boom" are copyrighted/trademarked and not
-something a script may legally redistribute, so this gives comparable
-comedic stingers without that risk.
+With FREESOUND_API_KEY configured, each named effect first tries to fetch
+a real matching sound from Freesound.org (cached locally so it's only
+downloaded once); otherwise (or if that fails) it falls back to a
+synthesized tone built from scratch with ffmpeg - not sampled from any
+existing meme audio, since viral clips like "Vine Boom" are copyrighted/
+trademarked and not something a script may legally redistribute.
 """
 from __future__ import annotations
 
 from pathlib import Path
 
+from . import freesound_client
 from .audio_synth import concat, silence, tone
+from .config import settings
 
 
 def _build_boom(out_path: Path, tmp_dir: Path) -> Path:
@@ -72,12 +75,64 @@ SFX_LIBRARY = {
     "chime": _build_chime,        # 叮!訂閱音效
 }
 
+# Search queries tried on Freesound before falling back to synthesis.
+SFX_QUERY_MAP = {
+    "boom": "impact boom bass hit",
+    "ding": "notification ding bell",
+    "guitar": "comedic electric guitar sting",
+    "phone": "telephone ring",
+    "heartbeat": "heartbeat thump",
+    "trombone": "sad trombone fail",
+    "chime": "cheerful chime bell",
+}
 
-def build_sfx(name: str, out_path: Path, tmp_dir: Path) -> Path | None:
-    """Build the named effect to ``out_path``, or return None if unknown."""
-    builder = SFX_LIBRARY.get(name)
-    if builder is None:
+_CACHE_DIR = Path(__file__).resolve().parent.parent / "assets" / "sfx_cache"
+
+
+def build_sfx(name: str, out_path: Path, tmp_dir: Path) -> tuple[Path, dict | None] | None:
+    """Build/fetch the named effect to ``out_path``.
+
+    Returns (path, attribution) where attribution is None for the
+    synthesized fallback or a CC0 Freesound result (no credit required),
+    and a dict for an Attribution-licensed Freesound result. Returns None
+    if ``name`` isn't a recognized effect at all.
+    """
+    if name not in SFX_LIBRARY:
         return None
     out_path.parent.mkdir(parents=True, exist_ok=True)
     tmp_dir.mkdir(parents=True, exist_ok=True)
-    return builder(out_path, tmp_dir)
+
+    if settings.freesound_api_key:
+        cached = _CACHE_DIR / f"{name}.mp3"
+        if cached.exists():
+            return cached, _cached_attribution(name)
+        result = freesound_client.search_and_download(
+            SFX_QUERY_MAP[name], cached, max_duration=4.0
+        )
+        if result is not None:
+            _save_cached_attribution(name, result)
+            attribution = None if freesound_client.is_cc0(result["license"]) else result
+            return cached, attribution
+
+    SFX_LIBRARY[name](out_path, tmp_dir)
+    return out_path, None
+
+
+def _attribution_cache_file(name: str) -> Path:
+    return _CACHE_DIR / f"{name}.attribution.json"
+
+
+def _cached_attribution(name: str) -> dict | None:
+    import json
+
+    f = _attribution_cache_file(name)
+    if not f.exists():
+        return None
+    data = json.loads(f.read_text(encoding="utf-8"))
+    return None if freesound_client.is_cc0(data["license"]) else data
+
+
+def _save_cached_attribution(name: str, result: dict) -> None:
+    import json
+
+    _attribution_cache_file(name).write_text(json.dumps(result, ensure_ascii=False), encoding="utf-8")

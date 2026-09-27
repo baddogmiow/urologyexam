@@ -74,18 +74,35 @@ def run_pipeline(
         )
         narrations.append(clip)
 
+    attributions: list[dict] = []
+
     if bgm_preset and not bgm_path:
-        bgm_path = bgm_module.build_bgm_preset(
+        bgm_result = bgm_module.build_bgm_preset(
             bgm_preset, work_dir / "bgm" / f"{bgm_preset}.wav", work_dir / "bgm"
         )
-        if bgm_path is None:
+        if bgm_result is None:
             available = ", ".join(bgm_module.BGM_PRESETS)
             raise SystemExit(f"找不到內建配樂 '{bgm_preset}',可用選項: {available}")
+        bgm_path, bgm_attribution = bgm_result
+        if bgm_attribution:
+            attributions.append(bgm_attribution)
 
     print("[4/5] 剪輯影片...")
-    video_path = video_builder.build_video(
+    video_path, sfx_attributions = video_builder.build_video(
         script, narrations, work_dir / "video.mp4", bgm_path=bgm_path
     )
+    attributions.extend(sfx_attributions)
+    if attributions:
+        credit_lines = "\n".join(
+            f"- \"{a['name']}\" by {a['username']} ({a['license']}) - {a['url']}"
+            for a in attributions
+        )
+        (work_dir / "ATTRIBUTION.txt").write_text(
+            "以下素材需要在影片描述中掛名credit(CC-BY授權要求):\n\n" + credit_lines + "\n",
+            encoding="utf-8",
+        )
+        print(f"注意: 有 {len(attributions)} 個素材需要掛名,詳見 {work_dir / 'ATTRIBUTION.txt'}")
+
     if thumbnail_file:
         thumb_path = thumbnail.use_custom_thumbnail(thumbnail_file, work_dir / "thumbnail.png")
     else:

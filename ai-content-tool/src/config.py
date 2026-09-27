@@ -43,6 +43,11 @@ class Settings:
 
     pexels_api_key: str = field(default_factory=lambda: os.getenv("PEXELS_API_KEY", ""))
 
+    freesound_api_key: str = field(default_factory=lambda: os.getenv("FREESOUND_API_KEY", ""))
+    # How loud the background music track is mixed relative to narration
+    # (0.0-1.0). Narration audio itself is not scaled.
+    bgm_volume: float = field(default_factory=lambda: float(os.getenv("BGM_VOLUME", "0.35")))
+
     output_dir: Path = ROOT_DIR / "output"
 
     def has_script_provider(self) -> bool:

@@ -148,7 +148,10 @@ def build_video(
     narrations: list[NarrationClip],
     out_path: Path,
     bgm_path: Path | None = None,
-) -> Path:
+) -> tuple[Path, list[dict]]:
+    """Returns (video_path, attributions) - attributions lists any
+    Attribution-licensed Freesound SFX credits the caller should surface
+    (e.g. write to an ATTRIBUTION.txt alongside the video)."""
     from moviepy import (
         AudioFileClip,
         CompositeAudioClip,
@@ -166,6 +169,7 @@ def build_video(
     from . import sfx as sfx_module
 
     sfx_dir = out_path.parent / "sfx"
+    attributions: list[dict] = []
 
     clips = []
     for i, (scene, narration) in enumerate(zip(script.scenes, narrations)):
@@ -177,9 +181,12 @@ def build_video(
         combined_audio = audio_clip
         sfx_clips = []
         for name in scene.sfx:
-            sfx_path = sfx_module.build_sfx(name, sfx_dir / f"scene_{i:02d}_{name}.wav", sfx_dir)
-            if sfx_path is not None:
+            result = sfx_module.build_sfx(name, sfx_dir / f"scene_{i:02d}_{name}.wav", sfx_dir)
+            if result is not None:
+                sfx_path, attribution = result
                 sfx_clips.append(AudioFileClip(str(sfx_path)))
+                if attribution:
+                    attributions.append(attribution)
         if sfx_clips:
             combined_audio = CompositeAudioClip([audio_clip, *sfx_clips])
 
@@ -193,7 +200,7 @@ def build_video(
     video = concatenate_videoclips(clips, method="compose")
 
     if bgm_path and bgm_path.exists():
-        bgm = AudioFileClip(str(bgm_path)).with_volume_scaled(0.08)
+        bgm = AudioFileClip(str(bgm_path)).with_volume_scaled(settings.bgm_volume)
         if bgm.duration < video.duration:
             loops = int(video.duration // bgm.duration) + 1
             from moviepy import concatenate_audioclips
@@ -214,4 +221,4 @@ def build_video(
     for clip in clips:
         clip.close()
 
-    return out_path
+    return out_path, attributions
