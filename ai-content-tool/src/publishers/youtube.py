@@ -97,10 +97,23 @@ class YouTubePublisher(Publisher):
         video_id = response["id"]
 
         if thumbnail_path and thumbnail_path.exists():
-            service.thumbnails().set(
-                videoId=video_id,
-                media_body=MediaFileUpload(str(thumbnail_path)),
-            ).execute()
+            from googleapiclient.errors import HttpError
+
+            try:
+                service.thumbnails().set(
+                    videoId=video_id,
+                    media_body=MediaFileUpload(str(thumbnail_path)),
+                ).execute()
+            except HttpError as exc:
+                # Most common cause: the channel isn't phone-verified yet -
+                # https://www.youtube.com/verify. The video itself already
+                # uploaded successfully at this point, so don't let a
+                # thumbnail failure hide that from the caller.
+                print(
+                    f"警告: 影片已上傳成功,但縮圖設定失敗 ({exc.status_code if hasattr(exc, 'status_code') else exc})。"
+                    "常見原因是頻道尚未完成手機驗證,請到 https://www.youtube.com/verify 驗證後"
+                    "自行到 YouTube Studio 補上縮圖。"
+                )
 
         return PublishResult(
             platform=self.name,
