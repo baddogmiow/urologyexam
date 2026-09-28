@@ -109,6 +109,7 @@ class Scene:
     visual_keyword: str
     speaker: str = "narrator"
     sfx: list[str] = field(default_factory=list)
+    image_path: str = ""
 
 
 def _parse_scene(s: dict) -> Scene:
@@ -118,19 +119,23 @@ def _parse_scene(s: dict) -> Scene:
     not just adds an extra one, so a plain s["narration"] lookup isn't
     reliable. Fall back to whatever other string field is present.
     """
-    reserved_keys = ("visual_keyword", "speaker", "sfx")
+    reserved_keys = ("visual_keyword", "speaker", "sfx", "image_path")
     visual_keyword = s.get("visual_keyword", "")
     speaker = s.get("speaker") or "narrator"
     sfx = s.get("sfx") or []
     if isinstance(sfx, str):
         sfx = [sfx]
+    image_path = s.get("image_path") or ""
     narration = s.get("narration")
     if narration is None:
         candidates = [v for k, v in s.items() if k not in reserved_keys and isinstance(v, str)]
         if not candidates:
             raise ScriptGenerationError(f"場景資料缺少旁白文字: {s}")
         narration = candidates[0]
-    return Scene(narration=narration, visual_keyword=visual_keyword, speaker=speaker, sfx=sfx)
+    return Scene(
+        narration=narration, visual_keyword=visual_keyword, speaker=speaker, sfx=sfx,
+        image_path=image_path,
+    )
 
 
 @dataclass

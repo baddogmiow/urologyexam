@@ -117,8 +117,22 @@ def _build_background(keyword: str) -> Image.Image:
     return img
 
 
-def render_scene_frame(narration: str, visual_keyword: str) -> Image.Image:
-    img = _build_background(visual_keyword)
+def _load_custom_image(path: Path) -> Image.Image:
+    img = Image.open(path).convert("RGB")
+    img = _cover_resize(img, FRAME_SIZE)
+    # Same legibility darkening as a fetched Pexels photo, so captions stay
+    # readable over whatever the user's own image looks like.
+    overlay = Image.new("RGB", FRAME_SIZE, (0, 0, 0))
+    return Image.blend(img, overlay, alpha=0.35)
+
+
+def render_scene_frame(
+    narration: str, visual_keyword: str, custom_image_path: Path | None = None
+) -> Image.Image:
+    if custom_image_path is not None:
+        img = _load_custom_image(custom_image_path)
+    else:
+        img = _build_background(visual_keyword)
     draw = ImageDraw.Draw(img)
     font = _load_font(64)
 
@@ -173,7 +187,8 @@ def build_video(
 
     clips = []
     for i, (scene, narration) in enumerate(zip(script.scenes, narrations)):
-        frame = render_scene_frame(scene.narration, scene.visual_keyword)
+        custom_image_path = Path(scene.image_path) if scene.image_path else None
+        frame = render_scene_frame(scene.narration, scene.visual_keyword, custom_image_path)
         frame_path = frames_dir / f"scene_{i:02d}.png"
         frame.save(frame_path)
 

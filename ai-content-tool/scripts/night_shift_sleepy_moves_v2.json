@@ -1,0 +1,61 @@
+{
+  "title": "值班累過頭的3種神操作",
+  "description": "住院醫師值班極限日常,純搞笑高共鳴短片。內容為虛構情境,分享醫院值班的荒謬日常,僅供娛樂參考。",
+  "tags": ["醫院日常", "值班趣事", "醫療迷因", "住院醫師", "搞笑"],
+  "thumbnail_text": "值班神操作",
+  "thumbnail_visual_keyword": "exhausted tired doctor funny meme",
+  "scenes": [
+    {
+      "speaker": "旁白",
+      "narration": "住院醫師值班累到極致,大腦直接斷線!這時候接電話,真的會開始出現各種失控的神操作!",
+      "visual_keyword": "exhausted doctor lying on call room bed staring ceiling",
+      "image_path": "assets/storyboards/night_shift/01_sleeping_bed.jpg"
+    },
+    {
+      "speaker": "護理師",
+      "narration": "醫師!3床病人突然發燒到38度半,要幫他補開一顆退燒藥嗎?",
+      "visual_keyword": "nurse making phone call night shift",
+      "image_path": "assets/storyboards/night_shift/02_phone_call.jpg"
+    },
+    {
+      "speaker": "住院醫師",
+      "narration": "給他加兩顆珍珠……半糖少冰……記得鹹酥雞要加辣加九層塔……",
+      "visual_keyword": "sleepy doctor mumbling on phone half asleep",
+      "image_path": "assets/storyboards/night_shift/02_phone_call.jpg"
+    },
+    {
+      "speaker": "護理師",
+      "narration": "……啊?現在是在點宵夜是不是?",
+      "visual_keyword": "confused nurse holding phone shocked expression"
+    },
+    {
+      "speaker": "旁白",
+      "narration": "再來是把護理站打來的緊急Call機,直接當成早上的鬧鐘,順手給它按掉!",
+      "visual_keyword": "hand slapping phone off like alarm clock bed"
+    },
+    {
+      "speaker": "住院醫師",
+      "narration": "別吵……再……再讓我睡五分鐘就好了……",
+      "visual_keyword": "doctor wrapped in blanket cocoon sleeping",
+      "image_path": "assets/storyboards/night_shift/03_blanket_cocoon.jpg"
+    },
+    {
+      "speaker": "護理師",
+      "narration": "電話打十通都不接!叫也叫不醒!你到底是賴床還是直接斷氣了?!",
+      "visual_keyword": "angry nurse bursting into call room door",
+      "image_path": "assets/storyboards/night_shift/04_nurse_bursts_in.jpg"
+    },
+    {
+      "speaker": "住院醫師",
+      "narration": "……學姐好!我馬上清醒!",
+      "visual_keyword": "startled doctor sitting up saluting shocked",
+      "image_path": "assets/storyboards/night_shift/04_nurse_bursts_in.jpg"
+    },
+    {
+      "speaker": "旁白",
+      "narration": "值班累到過頭的荒謬日常,你在醫院也看過這種值班奇觀嗎?留言區快來分享你的經驗!",
+      "visual_keyword": "tired doctor messy hair salute camera subscribe",
+      "image_path": "assets/storyboards/night_shift/05_salute.jpg"
+    }
+  ]
+}
