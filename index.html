@@ -620,6 +620,8 @@ body{
 .rate-row{display:flex;gap:8px;}
 .rate-row .btn{flex:1;justify-content:center;min-height:48px;padding:10px;font-size:.9rem;}
 .oral-q{white-space:pre-wrap;}
+.tab-hidden{display:none !important;}
+.exam-tabs{margin:4px 0 14px;}
 .oral-tip summary{cursor:pointer;font-size:.85rem;color:var(--muted);}
 .oral-tip ul{margin:8px 0 0;padding-left:18px;font-size:.82rem;line-height:1.8;color:var(--muted);}
 .oral-model{white-space:pre-wrap;font-size:.88rem;line-height:1.8;color:var(--muted);}
@@ -639,10 +641,16 @@ body{
           </svg>
         </div>
         <h1>泌尿科考古題</h1>
-        <p class="home-sub">115 年筆試考古題 · <span id="stat-total">0</span> 題 · 12 大類</p>
+        <p class="home-sub" data-tab="written">115 年筆試考古題 · <span id="stat-total">0</span> 題 · 12 大類</p>
+        <p class="home-sub" data-tab="oral">專科口試練習 · <span id="oral-total">0</span> 個 Case · 10 個領域</p>
       </header>
 
-      <div class="resume-banner" id="resume-banner" hidden>
+      <div class="mode-tabs exam-tabs" id="exam-tabs">
+        <button class="mode-tab active" data-examtab="written" type="button">筆試</button>
+        <button class="mode-tab" data-examtab="oral" type="button">口試</button>
+      </div>
+
+      <div class="resume-banner" id="resume-banner" hidden data-tab="written">
         <div class="resume-text">
           <span class="resume-title">偵測到上次未完成的作答</span>
           <span class="resume-info" id="resume-info"></span>
@@ -653,7 +661,7 @@ body{
         </div>
       </div>
 
-      <div class="home-stats" id="home-stats">
+      <div class="home-stats" id="home-stats" data-tab="written">
         <div class="stat-chip">
           <span class="stat-num" id="stat-answered">0</span>
           <span class="stat-label">已作答</span>
@@ -668,7 +676,7 @@ body{
         </div>
       </div>
 
-      <section class="home-section">
+      <section class="home-section" data-tab="written">
         <h2 class="section-title">學習模式</h2>
         <div class="mode-tabs" id="mode-tabs">
           <button class="mode-tab active" data-mode="quiz" type="button">刷題測驗</button>
@@ -676,7 +684,7 @@ body{
         </div>
       </section>
 
-      <section class="home-section">
+      <section class="home-section" data-tab="written">
         <h2 class="section-title" id="start-section-title">開始刷題</h2>
         <div class="mode-row">
           <label class="toggle">
@@ -704,7 +712,7 @@ body{
       </section>
 
 
-      <section class="home-section">
+      <section class="home-section" data-tab="written">
         <h2 class="section-title">間隔複習 (FSRS)</h2>
         <div class="srs-card">
           <div class="srs-row">
@@ -721,25 +729,46 @@ body{
         </div>
       </section>
 
-      <section class="home-section">
-        <h2 class="section-title">口試練習 · 待查詳解</h2>
-        <button class="btn btn-secondary btn-block" id="btn-oral">
-          <span class="btn-main">口試練習（先答再看詳解）</span>
-          <span class="btn-sub" id="btn-oral-sub">0 題</span>
-        </button>
+      <section class="home-section" data-tab="written">
+        <h2 class="section-title">待查詳解</h2>
         <button class="btn btn-secondary btn-block" id="btn-flag-export" disabled>
           <span class="btn-main">複製待查題目（給 AI 查核）</span>
           <span class="btn-sub" id="btn-flag-export-sub">0 題</span>
         </button>
       </section>
 
-      <section class="home-section">
+      <!-- ===== 口試分頁 ===== -->
+      <div class="home-stats" data-tab="oral">
+        <div class="stat-chip"><span class="stat-num" id="oh-total">0</span><span class="stat-label">Case 數</span></div>
+        <div class="stat-chip"><span class="stat-num" id="oh-done">0</span><span class="stat-label">已練習</span></div>
+        <div class="stat-chip"><span class="stat-num" id="oh-due">0</span><span class="stat-label">今日到期</span></div>
+      </div>
+
+      <section class="home-section" data-tab="oral">
+        <h2 class="section-title">口試</h2>
+        <button class="btn btn-primary btn-block" id="btn-oral-home-mock">
+          <span class="btn-main">模擬口試</span>
+          <span class="btn-sub">7 關 · 涵蓋 10 領域</span>
+        </button>
+        <button class="btn btn-secondary btn-block" id="btn-oral">
+          <span class="btn-main">口試練習（先答再看詳解）</span>
+          <span class="btn-sub" id="btn-oral-sub">0 題</span>
+        </button>
+        <p class="srs-note">匯入或清除口試題庫，請進「口試練習」頁。</p>
+      </section>
+
+      <section class="home-section" data-tab="oral">
+        <h2 class="section-title">依領域練習</h2>
+        <div class="cat-list" id="oral-cat-list"></div>
+      </section>
+
+      <section class="home-section" data-tab="written">
         <h2 class="section-title" id="cat-section-title">分類練習</h2>
         <div class="cat-list" id="cat-list"><!-- injected --></div>
       </section>
 
-      <p class="home-footnote">資料來源：115年泌尿科筆試考古題 PDF（AI 自動整理，解析欄位以文獻出處為主，如有疑義請對照原始 PDF 頁碼核實）。作答紀錄與錯題本會保存在此裝置的瀏覽器中。</p>
-      <button class="reset-link" id="btn-reset-data" type="button">清除本機作答紀錄與錯題本</button>
+      <p class="home-footnote" data-tab="written">資料來源：115年泌尿科筆試考古題 PDF（AI 自動整理，解析欄位以文獻出處為主，如有疑義請對照原始 PDF 頁碼核實）。作答紀錄與錯題本會保存在此裝置的瀏覽器中。</p>
+      <button class="reset-link" id="btn-reset-data" type="button" data-tab="written">清除本機作答紀錄、錯題本與口試資料</button>
     </div>
   </section>
 
@@ -1146,7 +1175,7 @@ function buildCategoryList(){
 
 function setHomeMode(mode){
   homeMode = mode;
-  document.querySelectorAll('.mode-tab').forEach(function(btn){
+  document.querySelectorAll('#mode-tabs .mode-tab').forEach(function(btn){
     btn.classList.toggle('active', btn.dataset.mode === mode);
   });
   var startTitle = document.getElementById('start-section-title');
@@ -1731,6 +1760,7 @@ function refreshSrsHome(){
   fb.disabled = flagged.length === 0;
   document.getElementById('btn-flag-export-sub').textContent = flagged.length + ' 題';
   document.getElementById('btn-oral-sub').textContent = X.oral.bank.length + ' 題';
+  if (homeTab === 'oral') renderOralHome();
 }
 
 /* ---- 題目 → 文字 / AI 提示詞 ---- */
@@ -2045,6 +2075,61 @@ function exportOralRecords(){
   if (out) copyText(out, '已複製作答紀錄'); else toast('沒有紀錄');
 }
 
+
+/* ---- 首頁：筆試 / 口試分頁 ---- */
+var HOME_TAB_KEY = 'urology_home_tab';
+var homeTab = 'written';
+try{ homeTab = window.localStorage.getItem(HOME_TAB_KEY) === 'oral' ? 'oral' : 'written'; }catch(e){}
+function setHomeTab(tab){
+  homeTab = tab === 'oral' ? 'oral' : 'written';
+  try{ window.localStorage.setItem(HOME_TAB_KEY, homeTab); }catch(e){}
+  document.querySelectorAll('#screen-home [data-tab]').forEach(function(el){
+    el.classList.toggle('tab-hidden', el.getAttribute('data-tab') !== homeTab);
+  });
+  document.querySelectorAll('#exam-tabs .mode-tab').forEach(function(b){
+    b.classList.toggle('active', b.getAttribute('data-examtab') === homeTab);
+  });
+  if (homeTab === 'oral') renderOralHome();
+  window.scrollTo(0, 0);
+}
+function renderOralHome(){
+  var bank = X.oral.bank, now = Date.now();
+  document.getElementById('oral-total').textContent = bank.length;
+  document.getElementById('oh-total').textContent = bank.length;
+  var done = 0, due = 0, counts = {}, doneBy = {};
+  bank.forEach(function(o){
+    var d = domainOf(o);
+    counts[d] = (counts[d] || 0) + 1;
+    if ((X.oral.records[o.id] || []).length){ done++; doneBy[d] = (doneBy[d] || 0) + 1; }
+    var c = X.fsrs['oral:' + o.id];
+    if (c && c.due <= now) due++;
+  });
+  document.getElementById('oh-done').textContent = done;
+  document.getElementById('oh-due').textContent = due;
+  var wrap = document.getElementById('oral-cat-list');
+  wrap.innerHTML = '';
+  var names = ORAL_DOMAINS.map(function(d){ return d.name; });
+  Object.keys(counts).forEach(function(d){ if (names.indexOf(d) < 0) names.push(d); });
+  names.forEach(function(name){
+    var n = counts[name] || 0;
+    var el = document.createElement('div');
+    el.className = 'cat-item';
+    var left = document.createElement('span'); left.className = 'cat-name-row';
+    var nm = document.createElement('span'); nm.className = 'cat-name'; nm.textContent = name;
+    left.appendChild(nm);
+    var right = document.createElement('span'); right.className = 'cat-count mono';
+    right.textContent = (doneBy[name] || 0) + ' / ' + n + ' Case';
+    el.appendChild(left); el.appendChild(right);
+    el.addEventListener('click', function(){
+      if (!n){ toast('這個領域還沒有口試題'); return; }
+      fillDomainSelect();
+      document.getElementById('oral-domain').value = name;
+      openOral();
+    });
+    wrap.appendChild(el);
+  });
+}
+
 function wireExtras(){
   document.getElementById('btn-srs-today').addEventListener('click', startTodayReview);
   var ed = document.getElementById('exam-date');
@@ -2052,9 +2137,13 @@ function wireExtras(){
   ed.addEventListener('change', function(){ X.examDate = ed.value; xSave(); refreshSrsHome(); });
   document.getElementById('btn-flag-export').addEventListener('click', exportFlagged);
   document.getElementById('btn-oral').addEventListener('click', openOral);
+  document.getElementById('btn-oral-home-mock').addEventListener('click', startOralMock);
+  document.querySelectorAll('#exam-tabs .mode-tab').forEach(function(b){
+    b.addEventListener('click', function(){ setHomeTab(b.getAttribute('data-examtab')); });
+  });
   document.getElementById('btn-oral-exit').addEventListener('click', function(){
     if (!document.getElementById('oral-practice-view').hidden){ oralState.mock = null; openOral(); return; }
-    stopOralTimer(); stopMic(); refreshHomeStats(); showScreen('home');
+    stopOralTimer(); stopMic(); stopRec(); setHomeTab('oral'); refreshHomeStats(); showScreen('home');
   });
   document.getElementById('btn-oral-import').addEventListener('click', function(){
     var items = parseOralImport(document.getElementById('oral-import').value);
@@ -2096,7 +2185,7 @@ function wireExtras(){
 }
 
 /* ---------------- wire up ---------------- */
-document.querySelectorAll('.mode-tab').forEach(function(btn){
+document.querySelectorAll('#mode-tabs .mode-tab').forEach(function(btn){
   btn.addEventListener('click', function(){ setHomeMode(btn.dataset.mode); });
 });
 document.getElementById('btn-start-all').addEventListener('click', startAll);
@@ -2136,6 +2225,7 @@ document.getElementById('btn-resume-discard').addEventListener('click', discardS
 loadState();
 xLoad();
 wireExtras();
+setHomeTab(homeTab);
 buildCategoryList();
 setHomeMode('quiz');
 refreshHomeStats();
