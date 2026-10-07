@@ -768,6 +768,12 @@ body{
       </section>
 
       <p class="home-footnote" data-tab="written">資料來源：115年泌尿科筆試考古題 PDF（AI 自動整理，解析欄位以文獻出處為主，如有疑義請對照原始 PDF 頁碼核實）。作答紀錄與錯題本會保存在此裝置的瀏覽器中。</p>
+      <div class="tool-row" style="justify-content:center;margin:18px 0 6px">
+        <button class="tool-btn" id="btn-backup" type="button">匯出備份</button>
+        <button class="tool-btn" id="btn-restore" type="button">還原備份</button>
+        <input type="file" id="restore-file" accept=".json,application/json" hidden>
+      </div>
+      <p class="srs-note" style="text-align:center">備份包含筆試紀錄、錯題本、間隔複習與口試題庫／紀錄。換手機或換瀏覽器前先匯出，再到新裝置還原。</p>
       <button class="reset-link" id="btn-reset-data" type="button" data-tab="written">清除本機作答紀錄、錯題本與口試資料</button>
     </div>
   </section>
@@ -946,6 +952,8 @@ body{
           <textarea class="tool-input" id="oral-import" style="min-height:110px" placeholder="Q: 請說明 PSA 篩檢的適應症與限制&#10;A: 定義… 鑑別… 檢查… 治療… 預後…"></textarea>
           <div class="tool-row">
             <button class="tool-btn" id="btn-oral-import" type="button">匯入</button>
+            <button class="tool-btn" id="btn-oral-file" type="button">選擇檔案匯入（.txt）</button>
+            <input type="file" id="oral-file" accept=".txt,.md,.json,text/plain" hidden>
             <button class="tool-btn" id="btn-oral-clear" type="button">清空口試題庫</button>
             <button class="tool-btn" id="btn-oral-export" type="button">複製作答紀錄</button>
           </div>
@@ -2130,6 +2138,41 @@ function renderOralHome(){
   });
 }
 
+/* ---- 檔案匯入口試題庫、備份／還原 ---- */
+function readFileText(file, cb){
+  var r = new FileReader();
+  r.onload = function(){ cb(String(r.result || '')); };
+  r.onerror = function(){ toast('讀取檔案失敗'); };
+  r.readAsText(file, 'utf-8');
+}
+function exportBackup(){
+  var data = { app: 'urologyexam', version: 1, savedAt: new Date().toISOString(), state: null, extra: null };
+  try{
+    data.state = window.localStorage.getItem(STORAGE_KEY);
+    data.extra = window.localStorage.getItem(X_KEY);
+  }catch(e){ toast('無法讀取本機資料'); return; }
+  var blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'urologyexam-backup-' + new Date().toISOString().slice(0,10) + '.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); }, 1000);
+  toast('已匯出備份');
+}
+function restoreBackup(file){
+  readFileText(file, function(text){
+    var data;
+    try{ data = JSON.parse(text); }catch(e){ toast('不是有效的備份檔'); return; }
+    if (!data || data.app !== 'urologyexam'){ toast('不是這個網頁的備份檔'); return; }
+    if (!window.confirm('還原會用備份取代目前這台裝置上的所有紀錄，確定嗎？')) return;
+    try{
+      if (data.state) window.localStorage.setItem(STORAGE_KEY, data.state);
+      if (data.extra) window.localStorage.setItem(X_KEY, data.extra);
+    }catch(e){ toast('寫入失敗'); return; }
+    window.location.reload();
+  });
+}
+
 function wireExtras(){
   document.getElementById('btn-srs-today').addEventListener('click', startTodayReview);
   var ed = document.getElementById('exam-date');
@@ -2138,6 +2181,20 @@ function wireExtras(){
   document.getElementById('btn-flag-export').addEventListener('click', exportFlagged);
   document.getElementById('btn-oral').addEventListener('click', openOral);
   document.getElementById('btn-oral-home-mock').addEventListener('click', startOralMock);
+  document.getElementById('btn-oral-file').addEventListener('click', function(){ document.getElementById('oral-file').click(); });
+  document.getElementById('oral-file').addEventListener('change', function(e){
+    var f = e.target.files && e.target.files[0]; if (!f) return;
+    readFileText(f, function(text){
+      document.getElementById('oral-import').value = text;
+      document.getElementById('btn-oral-import').click();
+    });
+    e.target.value = '';
+  });
+  document.getElementById('btn-backup').addEventListener('click', exportBackup);
+  document.getElementById('btn-restore').addEventListener('click', function(){ document.getElementById('restore-file').click(); });
+  document.getElementById('restore-file').addEventListener('change', function(e){
+    var f = e.target.files && e.target.files[0]; if (f) restoreBackup(f); e.target.value = '';
+  });
   document.querySelectorAll('#exam-tabs .mode-tab').forEach(function(b){
     b.addEventListener('click', function(){ setHomeTab(b.getAttribute('data-examtab')); });
   });
