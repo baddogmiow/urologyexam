@@ -619,6 +619,9 @@ body{
 .oral-ans{width:100%;min-height:160px;background:var(--surface-2);color:var(--ink);border:1px solid var(--border);border-radius:12px;padding:12px;font-family:inherit;font-size:.95rem;line-height:1.7;resize:vertical;}
 .rate-row{display:flex;gap:8px;}
 .rate-row .btn{flex:1;justify-content:center;min-height:48px;padding:10px;font-size:.9rem;}
+.oral-q{white-space:pre-wrap;}
+.oral-tip summary{cursor:pointer;font-size:.85rem;color:var(--muted);}
+.oral-tip ul{margin:8px 0 0;padding-left:18px;font-size:.82rem;line-height:1.8;color:var(--muted);}
 .oral-model{white-space:pre-wrap;font-size:.88rem;line-height:1.8;color:var(--muted);}
 .toast{position:fixed;left:50%;bottom:calc(var(--safe-bottom) + 90px);transform:translateX(-50%);background:var(--surface-3);color:var(--ink);padding:10px 16px;border-radius:999px;font-size:.85rem;z-index:50;border:1px solid var(--border);}
 </style>
@@ -918,25 +921,44 @@ body{
             <button class="tool-btn" id="btn-oral-export" type="button">複製作答紀錄</button>
           </div>
         </div>
+        <div class="srs-card" style="margin-top:12px">
+          <div class="tool-row" style="margin-top:0">
+            <select class="tool-btn" id="oral-domain"></select>
+            <button class="tool-btn on" id="btn-oral-mock" type="button">▶ 模擬口試（7 關 × 7 分鐘）</button>
+          </div>
+          <p class="srs-note">模擬口試：從不同領域隨機抽 7 個 Case，每關 7 分鐘，時間到自動結束作答。</p>
+        </div>
         <div id="oral-list" style="display:flex;flex-direction:column;gap:8px;margin-top:12px"></div>
       </div>
 
       <div id="oral-practice-view" hidden>
         <div class="srs-card">
           <div class="explain-label" id="oral-qmeta"></div>
-          <h2 class="quiz-question" id="oral-question" style="margin:8px 0 0"></h2>
+          <h2 class="quiz-question oral-q" id="oral-question" style="margin:8px 0 0;font-size:1.02rem"></h2>
         </div>
         <div class="srs-card">
           <div class="oral-timer mono" id="oral-timer">00:00</div>
           <div class="tool-row" style="justify-content:center;margin-top:6px">
             <select class="tool-btn" id="oral-limit">
               <option value="180">限時 3 分</option>
-              <option value="300" selected>限時 5 分</option>
+              <option value="420" selected>限時 7 分（考場）</option>
+              <option value="300">限時 5 分</option>
               <option value="480">限時 8 分</option>
               <option value="0">不限時</option>
             </select>
-            <button class="tool-btn" id="btn-oral-mic" type="button">🎤 語音輸入</button>
+            <button class="tool-btn" id="btn-oral-mic" type="button">🎤 語音轉文字</button>
+            <button class="tool-btn" id="btn-oral-rec" type="button">🎙 錄音回放</button>
           </div>
+          <audio id="oral-audio" controls hidden style="width:100%;margin-top:10px"></audio>
+          <details class="oral-tip" style="margin-top:10px">
+            <summary>作答提醒</summary>
+            <ul>
+              <li>先看清楚題目：腫瘤題的 staging / risk 一錯，後面全錯。</li>
+              <li>不要因為緊張講太快；聽不清楚就沒有分。</li>
+              <li>不會的小題直接跳過，不要卡住；還有時間再補充。</li>
+              <li>腫瘤題通常有一小題問 staging 判讀與評估方式。</li>
+            </ul>
+          </details>
         </div>
         <textarea class="oral-ans" id="oral-answer" placeholder="開口回答（語音會轉成文字），或直接打字。先不要看詳解。"></textarea>
         <button class="btn btn-primary btn-block" id="btn-oral-finish" style="margin-top:12px">完成作答，看詳解</button>
@@ -1741,7 +1763,12 @@ function refreshFlagUi(){
 }
 
 /* ---- 口試 ---- */
-var oralState = { id: null, timer: null, start: 0, rec: null, recording: false };
+var oralState = { id: null, timer: null, start: 0, rec: null, recording: false, mock: null, auto: false, mr: null, chunks: [], stream: null };
+function domainOf(o){ var m = o.q.match(/^【([^｜】]+)｜/); return m ? m[1] : '未分類'; }
+function oralShortQ(o){ return o.q.replace(/^【[^】]*】/, '').replace(/^病例：/, '').slice(0, 110); }
+function oralFmtQ(q){
+  return q.replace(/\s*（第([一二三四五六七八九十]+)題）\s*/g, '\n\n第$1題：').replace(/^\n+/, '');
+}
 function parseOralImport(text){
   text = text.trim();
   if (!text) return [];
@@ -1764,27 +1791,39 @@ function parseOralImport(text){
     return { q: q.join('\n').trim(), a: a.join('\n').trim() };
   }).filter(function(o){ return o.q; });
 }
+function fillDomainSelect(){
+  var sel = document.getElementById('oral-domain');
+  var cur = sel.value || '';
+  var counts = {};
+  X.oral.bank.forEach(function(o){ var d = domainOf(o); counts[d] = (counts[d] || 0) + 1; });
+  sel.innerHTML = '<option value="">全部領域（' + X.oral.bank.length + '）</option>' +
+    Object.keys(counts).map(function(d){ return '<option value="' + d.replace(/"/g,'&quot;') + '">' + d + '（' + counts[d] + '）</option>'; }).join('');
+  sel.value = counts[cur] ? cur : '';
+}
 function renderOralList(){
   var wrap = document.getElementById('oral-list');
   wrap.innerHTML = '';
+  fillDomainSelect();
   if (!X.oral.bank.length){
     wrap.innerHTML = '<p class="srs-note">還沒有口試題。貼上歷屆口試考古題後按「匯入」。</p>';
     return;
   }
+  var dom = document.getElementById('oral-domain').value;
   X.oral.bank.forEach(function(o, i){
+    if (dom && domainOf(o) !== dom) return;
     var recs = X.oral.records[o.id] || [];
     var el = document.createElement('div');
     el.className = 'oral-item';
-    var qd = document.createElement('div'); qd.className = 'oq'; qd.textContent = (i+1) + '. ' + o.q;
+    var qd = document.createElement('div'); qd.className = 'oq'; qd.textContent = (i+1) + '. [' + domainOf(o) + '] ' + oralShortQ(o);
     var md = document.createElement('div'); md.className = 'om';
     md.textContent = recs.length ? '已練 ' + recs.length + ' 次 · 上次自評：' + ['','沒答出來','部分','掌握'][recs[recs.length-1].rating] : '尚未練習';
     el.appendChild(qd); el.appendChild(md);
-    el.addEventListener('click', function(){ openOralPractice(o.id); });
+    el.addEventListener('click', function(){ oralState.mock = null; openOralPractice(o.id); });
     wrap.appendChild(el);
   });
 }
 function openOral(){
-  stopOralTimer(); stopMic();
+  stopOralTimer(); stopMic(); stopRec();
   document.getElementById('oral-title').textContent = '口試練習';
   document.getElementById('oral-list-view').hidden = false;
   document.getElementById('oral-practice-view').hidden = true;
@@ -1800,8 +1839,14 @@ function openOralPractice(id){
   document.getElementById('oral-practice-view').hidden = false;
   document.getElementById('oral-review').hidden = true;
   document.getElementById('btn-oral-finish').hidden = false;
-  document.getElementById('oral-qmeta').textContent = '口試題';
-  document.getElementById('oral-question').textContent = o.q;
+  oralState.auto = false;
+  stopRec();
+  var au = document.getElementById('oral-audio'); au.hidden = true; au.removeAttribute('src');
+  var mk = oralState.mock;
+  document.getElementById('oral-title').textContent = mk ? ('模擬口試 第 ' + (mk.idx + 1) + ' / ' + mk.queue.length + ' 關') : '口試練習';
+  document.getElementById('oral-qmeta').textContent = domainOf(o);
+  document.getElementById('oral-question').textContent = oralFmtQ(o.q.replace(/^【[^】]*】\s*/, ''));
+  if (mk) document.getElementById('oral-limit').value = '420';
   document.getElementById('oral-answer').value = '';
   document.getElementById('oral-timer').classList.remove('over');
   document.getElementById('oral-timer').textContent = '00:00';
@@ -1814,7 +1859,8 @@ function oralElapsed(){ return Math.round((Date.now() - oralState.start) / 1000)
 function tickOral(){
   var limit = +document.getElementById('oral-limit').value, el = oralElapsed();
   var t = document.getElementById('oral-timer');
-  if (limit){ var left = limit - el; t.textContent = (left < 0 ? '-' : '') + fmtTime(Math.abs(left)); t.classList.toggle('over', left < 0); }
+  if (limit){ var left = limit - el; t.textContent = (left < 0 ? '-' : '') + fmtTime(Math.abs(left)); t.classList.toggle('over', left < 0);
+    if (left <= 0 && oralState.mock && !oralState.auto){ oralState.auto = true; toast('時間到'); finishOral(); } }
   else t.textContent = fmtTime(el);
 }
 function toggleMic(){
@@ -1834,17 +1880,17 @@ function toggleMic(){
   try{ rec.start(); }catch(err){ return; }
   oralState.rec = rec; oralState.recording = true;
   document.getElementById('btn-oral-mic').classList.add('on');
-  document.getElementById('btn-oral-mic').textContent = '⏺ 錄音中（點擊停止）';
+  document.getElementById('btn-oral-mic').textContent = '⏺ 轉文字中（點擊停止）';
 }
 function stopMic(){
   oralState.recording = false;
   if (oralState.rec){ try{ oralState.rec.stop(); }catch(e){} oralState.rec = null; }
   var b = document.getElementById('btn-oral-mic');
-  b.classList.remove('on'); b.textContent = '🎤 語音輸入';
+  b.classList.remove('on'); b.textContent = '🎤 語音轉文字';
 }
 function oralCurrent(){ return X.oral.bank.filter(function(x){ return x.id === oralState.id; })[0]; }
 function finishOral(){
-  stopOralTimer(); stopMic();
+  stopOralTimer(); stopMic(); stopRec();
   oralState.sec = oralElapsed();
   var o = oralCurrent();
   document.getElementById('oral-model').textContent = o && o.a ? o.a : '（這題沒有附詳解，請用 AI 或教科書對照）';
@@ -1858,8 +1904,55 @@ function rateOral(grade){
   });
   fsrsReview('oral:' + o.id, grade);
   xSave();
+  var mk = oralState.mock;
+  if (mk){
+    mk.results.push(grade);
+    mk.idx++;
+    if (mk.idx < mk.queue.length){ openOralPractice(mk.queue[mk.idx]); return; }
+    var r = mk.results;
+    oralState.mock = null;
+    toast('模擬口試完成：掌握 ' + r.filter(function(x){return x===3;}).length + '、部分 ' + r.filter(function(x){return x===2;}).length + '、沒答出來 ' + r.filter(function(x){return x===1;}).length);
+    openOral();
+    return;
+  }
   toast('已記錄');
   openOral();
+}
+/* ---- 錄音回放（不儲存，只供當次自我檢討） ---- */
+function toggleRec(){
+  if (oralState.mr){ stopRec(); return; }
+  if (!navigator.mediaDevices || !window.MediaRecorder){ toast('此瀏覽器不支援錄音'); return; }
+  navigator.mediaDevices.getUserMedia({ audio: true }).then(function(stream){
+    oralState.stream = stream; oralState.chunks = [];
+    var mr = new MediaRecorder(stream);
+    mr.ondataavailable = function(e){ if (e.data && e.data.size) oralState.chunks.push(e.data); };
+    mr.onstop = function(){
+      var blob = new Blob(oralState.chunks, { type: mr.mimeType || 'audio/webm' });
+      var au = document.getElementById('oral-audio');
+      au.src = URL.createObjectURL(blob); au.hidden = false;
+      stream.getTracks().forEach(function(t){ t.stop(); });
+    };
+    mr.start(); oralState.mr = mr;
+    var b = document.getElementById('btn-oral-rec'); b.classList.add('on'); b.textContent = '⏺ 錄音中（點擊停止）';
+  }).catch(function(){ toast('無法使用麥克風'); });
+}
+function stopRec(){
+  var mr = oralState.mr; oralState.mr = null;
+  if (mr && mr.state !== 'inactive'){ try{ mr.stop(); }catch(e){} }
+  var b = document.getElementById('btn-oral-rec'); if (b){ b.classList.remove('on'); b.textContent = '🎙 錄音回放'; }
+}
+function startOralMock(){
+  var bank = X.oral.bank;
+  if (!bank.length){ toast('請先匯入口試題'); return; }
+  var by = {};
+  bank.forEach(function(o){ (by[domainOf(o)] = by[domainOf(o)] || []).push(o); });
+  var doms = shuffle(Object.keys(by)), queue = [];
+  doms.forEach(function(d){ if (queue.length < 7) queue.push(shuffle(by[d])[0].id); });
+  if (queue.length < 7){
+    shuffle(bank).forEach(function(o){ if (queue.length < 7 && queue.indexOf(o.id) < 0) queue.push(o.id); });
+  }
+  oralState.mock = { queue: queue, idx: 0, results: [] };
+  openOralPractice(queue[0]);
 }
 function oralAiPrompt(){
   var o = oralCurrent(); if (!o) return;
@@ -1889,7 +1982,7 @@ function wireExtras(){
   document.getElementById('btn-flag-export').addEventListener('click', exportFlagged);
   document.getElementById('btn-oral').addEventListener('click', openOral);
   document.getElementById('btn-oral-exit').addEventListener('click', function(){
-    if (!document.getElementById('oral-practice-view').hidden){ openOral(); return; }
+    if (!document.getElementById('oral-practice-view').hidden){ oralState.mock = null; openOral(); return; }
     stopOralTimer(); stopMic(); refreshHomeStats(); showScreen('home');
   });
   document.getElementById('btn-oral-import').addEventListener('click', function(){
@@ -1909,6 +2002,9 @@ function wireExtras(){
   });
   document.getElementById('btn-oral-export').addEventListener('click', exportOralRecords);
   document.getElementById('btn-oral-mic').addEventListener('click', toggleMic);
+  document.getElementById('btn-oral-rec').addEventListener('click', toggleRec);
+  document.getElementById('btn-oral-mock').addEventListener('click', startOralMock);
+  document.getElementById('oral-domain').addEventListener('change', renderOralList);
   document.getElementById('btn-oral-finish').addEventListener('click', finishOral);
   document.getElementById('btn-oral-ai').addEventListener('click', oralAiPrompt);
   document.querySelectorAll('#oral-review [data-rate]').forEach(function(b){
