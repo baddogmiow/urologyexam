@@ -624,6 +624,11 @@ body{
 .exam-tabs{margin:4px 0 14px;}
 .oral-tip summary{cursor:pointer;font-size:.85rem;color:var(--muted);}
 .oral-tip ul{margin:8px 0 0;padding-left:18px;font-size:.82rem;line-height:1.8;color:var(--muted);}
+.osub{margin:0 0 18px;}
+.osub-h{font-size:.82rem;font-weight:700;color:var(--accent);letter-spacing:.04em;margin:0 0 6px;}
+.osub-q{white-space:pre-wrap;font-size:.86rem;line-height:1.7;color:var(--ink);border-left:3px solid var(--accent-dim);padding:2px 0 2px 10px;margin:0 0 8px;}
+.osub-lab{display:inline-block;font-size:.7rem;color:var(--muted-2);margin-right:6px;}
+.osub-a{white-space:pre-wrap;font-size:.88rem;line-height:1.8;color:var(--muted);}
 .oral-model{white-space:pre-wrap;font-size:.88rem;line-height:1.8;color:var(--muted);}
 .toast{position:fixed;left:50%;bottom:calc(var(--safe-bottom) + 90px);transform:translateX(-50%);background:var(--surface-3);color:var(--ink);padding:10px 16px;border-radius:999px;font-size:.85rem;z-index:50;border:1px solid var(--border);}
 </style>
@@ -1004,7 +1009,7 @@ body{
         <div id="oral-review" hidden>
           <div class="srs-card" style="margin-top:12px">
             <div class="explain-label">詳解（對照你的回答）</div>
-            <p class="oral-model" id="oral-model"></p>
+            <div class="oral-model" id="oral-model"></div>
           </div>
           <div class="explain-label" style="margin:12px 0 8px">自評（決定下次何時再出現）</div>
           <div class="rate-row">
@@ -1958,7 +1963,7 @@ function finishOral(){
   stopOralTimer(); stopMic(); stopRec();
   oralState.sec = oralElapsed();
   var o = oralCurrent();
-  document.getElementById('oral-model').textContent = o && o.a ? o.a : '（這題沒有附詳解，請用 AI 或教科書對照）';
+  renderOralModel(o);
   document.getElementById('oral-review').hidden = false;
   document.getElementById('btn-oral-finish').hidden = true;
 }
@@ -2170,6 +2175,55 @@ function restoreBackup(file){
       if (data.extra) window.localStorage.setItem(X_KEY, data.extra);
     }catch(e){ toast('寫入失敗'); return; }
     window.location.reload();
+  });
+}
+
+/* ---- 詳解：每個小題的題目與答案成組顯示 ---- */
+var CN_LABEL = /（第([一二三四五六七八九十]+)題）/;
+function splitOralQuestions(q){
+  // 回傳 { label: 題目文字 }
+  var body = q.replace(/^【[^】]*】\s*/, '');
+  var parts = body.split(/（第([一二三四五六七八九十]+)題）/);
+  var map = {};
+  for (var i = 1; i < parts.length; i += 2) map[parts[i]] = (parts[i + 1] || '').trim();
+  return map;
+}
+function splitOralAnswers(a){
+  var parts = a.split(/(?:^|\n)■ 第([一二三四五六七八九十]+)題[ \t]*\n?/);
+  var out = [];
+  for (var i = 1; i < parts.length; i += 2) out.push({ label: parts[i], text: (parts[i + 1] || '').trim() });
+  return out;
+}
+function renderOralModel(o){
+  var box = document.getElementById('oral-model');
+  box.innerHTML = '';
+  var empty = function(t){ var d = document.createElement('div'); d.className = 'osub-a'; d.textContent = t; box.appendChild(d); };
+  if (!o || !o.a){ empty('（這題沒有附詳解，請用 AI 或教科書對照）'); return; }
+  var answers = splitOralAnswers(o.a);
+  if (!answers.length){ empty(o.a); return; }
+  var qmap = splitOralQuestions(o.q);
+  var norm = function(x){ return String(x).replace(/\s+/g, ''); };
+  answers.forEach(function(sub){
+    // 詳解開頭若重複了題目文字，就把那幾行拿掉（題目已經獨立顯示在上方）
+    var nq = norm(qmap[sub.label] || '');
+    if (nq){
+      var lines = sub.text.split('\n'), acc = '', i = 0;
+      while (i < lines.length && nq.indexOf(acc + norm(lines[i])) === 0 && norm(lines[i])){ acc += norm(lines[i]); i++; }
+      if (acc.length >= Math.min(nq.length, 12) && acc.length >= nq.length * 0.9 && i < lines.length) sub = { label: sub.label, text: lines.slice(i).join('\n').trim() };
+    }
+    var wrap = document.createElement('div'); wrap.className = 'osub';
+    var h = document.createElement('div'); h.className = 'osub-h'; h.textContent = '第' + sub.label + '題';
+    wrap.appendChild(h);
+    if (qmap[sub.label]){
+      var q = document.createElement('div'); q.className = 'osub-q';
+      var lab = document.createElement('span'); lab.className = 'osub-lab'; lab.textContent = '題目';
+      q.appendChild(lab); q.appendChild(document.createTextNode(qmap[sub.label]));
+      wrap.appendChild(q);
+    }
+    var a = document.createElement('div'); a.className = 'osub-a';
+    a.textContent = sub.text || '（這題沒有詳解）';
+    wrap.appendChild(a);
+    box.appendChild(wrap);
   });
 }
 
