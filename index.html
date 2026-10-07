@@ -2206,6 +2206,7 @@ function renderOralModel(o){
   answers.forEach(function(sub){
     // 詳解開頭若重複了題目文字，就把那幾行拿掉（題目已經獨立顯示在上方）
     var nq = norm(qmap[sub.label] || '');
+    if (nq && /^\s*【題目】/.test(sub.text)) sub = { label: sub.label, text: sub.text.replace(/^\s*【題目】[^\n]*\n?/, '').trim() };
     if (nq){
       var lines = sub.text.split('\n'), acc = '', i = 0;
       while (i < lines.length && nq.indexOf(acc + norm(lines[i])) === 0 && norm(lines[i])){ acc += norm(lines[i]); i++; }
