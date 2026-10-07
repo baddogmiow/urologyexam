@@ -1,0 +1,437 @@
+#!/usr/bin/env python3
+"""把口試題目（PPT 或 PDF）轉成口試練習頁的匯入格式。PPT 與 PDF 可以放在同一個資料夾。
+
+一個 Case（一大題）一筆，格式與網頁相同：
+  Q: 【領域｜Case 名稱】病例：... （第一題）題目 （第二題）題目 ...
+  A: ■ 第一題
+     詳解...
+     【給分點】...
+     【出處】...
+
+用法：
+  python tools/oral_convert.py 資料夾 --domain "01 結石" -o oral_結石.txt
+  python tools/oral_convert.py a.pptx b.pdf --domain "01 結石" -o oral_結石.txt
+
+領域：01 結石、02 前列腺疾病含癌症、03 腎臟輸尿管膀胱腫瘤、04 腎上腺&外生殖器腫瘤、
+      06 排尿功能障礙&女性泌尿、07 男性學、08 小兒泌尿、09 移植、10 感染、11 外傷
+不同領域請分開執行。請用 -o 寫檔（Windows PowerShell 的 > 會讓中文變亂碼）。
+
+輸入類型（自動判斷）：
+  .pptx                    投影片：Case / 第N題 / 第N題: 解答（含 Checkpoint、Ref.）
+  .pdf（投影片轉出的 PDF） 每頁一張投影片，規則同上
+  .pdf（文件 / 共筆）       「第N題」加「Answer：」或表格，版式不固定，準確度較低
+圖片不轉換，只標示張數。轉完會印出「需要核對」的清單，請務必對照原檔抽查。
+"""
+import argparse
+import os
+import re
+import sys
+
+NUM = '一二三四五六七八九十'
+GLYPH = '❖•●○◆·▪■□➢➤⚫'
+QM = re.compile(r'^第\s*([0-9一二三四五六七八九十]+)\s*題\s*$')
+AM = re.compile(r'^第\s*([0-9一二三四五六七八九十]+)\s*題\s*[:：]')
+QINLINE = re.compile(r'^第\s*([0-9一二三四五六七八九十]+)\s*題\s*[:：]?\s*(.*)$')
+CASE = re.compile(r'^\s*case\b', re.I)
+SRC = re.compile(r'^\s*ref\b|doi|PMID|edition|guideline|et al', re.I)
+CP = re.compile(r'^\s*checkpoint\s*[:：]?', re.I)
+NOISE = re.compile(r'口試出題範例|^for考官$')
+STEM_START = re.compile(r'^(Case\b|\(?（?\d+[)）]\s*115年口試|第[一二三四五六七八九十]波|\d{2,3}\s*歲|一位|一名|一對|一個\d+個月)')
+
+
+def cn(n):
+    n = str(n)
+    return NUM[int(n) - 1] if n.isdigit() and 1 <= int(n) <= 10 else n
+
+
+def num(n):
+    n = str(n)
+    return int(n) if n.isdigit() else (NUM.index(n) + 1 if n in NUM else 0)
+
+
+def unglyph(s):
+    return s.lstrip(GLYPH + ' \t').strip()
+
+
+def bullet(l):
+    """行首的 ❖、• 等符號統一成「• 」，沒有符號的行不動。"""
+    l = l.strip()
+    return '• ' + unglyph(l) if l and l[0] in GLYPH else l
+
+
+def new_case(label='', stem=''):
+    return {'label': label, 'stem': stem, 'subs': [], 'flags': []}
+
+
+def new_sub(n, q=''):
+    return {'num': cn(n), 'q': q, 'ans': [], 'cp': [], 'src': [], 'pics': 0}
+
+
+def add_answer_line(sub, l, state):
+    """把一行放進詳解／給分點／出處。state 是 {'in_cp': bool}"""
+    l = l.strip()
+    if not l:
+        return
+    u = unglyph(l)
+    if CP.match(u):
+        state['in_cp'] = True
+        rest = CP.sub('', u).strip()
+        if rest:
+            sub['cp'].append(rest)
+    elif SRC.search(u) and len(u) < 400:
+        sub['src'].append(re.sub(r'^ref\.?\s*', '', u, flags=re.I))
+        state['in_cp'] = False
+    elif state['in_cp']:
+        sub['cp'].append(u)
+    else:
+        sub['ans'].append(bullet(l))
+
+
+# ------------------------------------------------------------------ 投影片（PPT / 投影片式 PDF）
+def parse_slides(slides):
+    """slides: [(lines, pics)]"""
+    cases, cur, sub = [], None, None
+    for lines, pics in slides:
+        lines = [l for l in lines if l.strip() and not NOISE.search(l.strip())]
+        if not lines:
+            continue
+        head = unglyph(lines[0])
+        if CASE.match(head):
+            cur = new_case(re.sub(r'\s+', ' ', head).strip(), ' '.join(unglyph(x) for x in lines[1:]))
+            cases.append(cur)
+            sub = None
+            continue
+        if cur is None:
+            cur = new_case('')
+            cases.append(cur)
+        m = QM.match(head)
+        if m:
+            sub = new_sub(m.group(1), '')
+            cur['subs'].append(sub)
+            st = {'in_cp': False}
+            q = []
+            for l in lines[1:]:
+                if CP.match(l.strip().lstrip(GLYPH + ' ')):
+                    add_answer_line(sub, l.strip().lstrip(GLYPH + ' '), st)
+                elif st['in_cp']:
+                    sub['cp'].append(unglyph(l))
+                else:
+                    q.append(unglyph(l))
+            sub['q'] = ' '.join(q)
+            continue
+        m = AM.match(head)
+        if m:
+            n = cn(m.group(1))
+            target = next((s for s in cur['subs'] if s['num'] == n), None) or sub
+            if target is None:
+                continue
+            sub = target
+            sub['pics'] += pics
+            st = {'in_cp': False}
+            for l in lines[1:]:
+                add_answer_line(sub, l, st)
+            continue
+        if sub is not None:                       # 續頁：併入最近一題
+            sub['pics'] += pics
+            st = {'in_cp': False}
+            for l in lines:
+                if SRC.search(l) or CP.match(l.strip().lstrip(GLYPH + ' ')):
+                    add_answer_line(sub, l.strip().lstrip(GLYPH + ' '), st)
+                else:
+                    sub['ans'].append(l)
+    return cases
+
+
+def pptx_slides(path):
+    from pptx import Presentation
+    out = []
+    for slide in Presentation(path).slides:
+        lines, pics = [], 0
+        for sh in slide.shapes:
+            if sh.shape_type == 13:
+                pics += 1
+            if sh.has_text_frame:
+                lines += [l.strip() for l in sh.text_frame.text.splitlines() if l.strip()]
+            if getattr(sh, 'has_table', False) and sh.has_table:
+                for r in sh.table.rows:
+                    lines.append(' | '.join(c.text.strip() for c in r.cells))
+        out.append((lines, pics))
+    return out
+
+
+# ------------------------------------------------------------------ PDF 共用
+def join_wrapped(text):
+    """合併 PDF 的硬換行：項目符號、編號、第N題、Case、Answer 開頭才算新的一行。"""
+    start = re.compile(r'^\s*(?:[' + re.escape(GLYPH) + r'\-–]|\d+[.)、．]|[A-Za-z][.)]\s|[①-⑩]|\(\d+\)|第\s*[0-9一二三四五六七八九十]+\s*(?:小)?題|Case\b|Answer\s*[:：]|Ref\b|Checkpoint)', re.I)
+    out = []
+    for raw in text.split('\n'):
+        if not raw.strip():
+            continue
+        if out and not start.match(raw):
+            out[-1] += raw
+        else:
+            out.append(raw)
+    return [re.sub(r'[ \t]+', ' ', l).strip() for l in out if l.strip()]
+
+
+def pdf_pages(path):
+    import pymupdf
+    return pymupdf.open(path)
+
+
+def is_slide_pdf(doc):
+    """每頁字少，且多頁以「第N題」或 Case 開頭 → 投影片式 PDF"""
+    chars = sorted(len(p.get_text()) for p in doc)
+    median = chars[len(chars) // 2] if chars else 0
+    starts = 0
+    for p in doc:
+        first = next((l.strip() for l in p.get_text().split('\n') if l.strip()), '')
+        if QINLINE.match(unglyph(first)) or CASE.match(unglyph(first)):
+            starts += 1
+    return median < 450 and starts >= max(3, len(doc) // 3)
+
+
+def pdf_slide_cases(doc):
+    slides = []
+    for p in doc:
+        lines = join_wrapped(p.get_text())
+        slides.append((lines, len(p.get_images())))
+    return parse_slides(slides)
+
+
+# ------------------------------------------------------------------ 文件式 PDF（共筆）
+def pdf_doc_cases(doc):
+    """文件式 PDF：以「Case」、「第N題」、「Answer：」切分；題號從頭開始就視為新的 Case。"""
+    events = []
+    for pi, page in enumerate(doc):
+        trects, rows_all = [], []
+        try:
+            tabs = page.find_tables().tables
+        except Exception:
+            tabs = []
+        for t in tabs:
+            parsed = []
+            for r in t.extract():
+                cells = []
+                for j, c in enumerate(r):
+                    if c and c.strip() and (not cells or cells[-1][1] != c.strip()):
+                        cells.append((j, c.strip()))
+                if cells:
+                    parsed.append(cells)
+            left = min((c[0][0] for c in parsed if len(c) == 2), default=None)
+            started, header = False, []
+            for cells in parsed:
+                if len(cells) >= 2:
+                    c0, c1 = cells[0][1], ' '.join(x[1] for x in cells[1:])
+                    if QINLINE.match(c0) and QM.match(c0.split('\n')[0].strip()):
+                        started = True
+                        events.append(('row', c0, c1))
+                    elif started:
+                        events.append(('cont', c0, c1))
+                    else:
+                        header += [x[1] for x in cells]
+                else:
+                    j, c = cells[0]
+                    if QM.match(c.split('\n')[0].strip()):
+                        started = True
+                        events.append(('row', c, ''))
+                    elif started:
+                        events.append(('qcont' if (left is not None and j <= left) else 'acont', c, ''))
+                    else:
+                        header.append(c)
+            if header:
+                events.append(('text', '\n'.join(header)))
+            trects.append(t.bbox)
+        rest = []
+        for b in page.get_text('blocks'):
+            x0, y0, x1, y1, txt = b[:5]
+            inside = any(x0 >= tb[0] - 2 and y0 >= tb[1] - 2 and x1 <= tb[2] + 2 and y1 <= tb[3] + 2 for tb in trects)
+            if not inside and txt.strip():
+                rest.append((y0, txt))
+        if rest:
+            events.append(('text', ''.join(t for _, t in sorted(rest))))
+
+    cases, cur, sub = [], None, None
+    mode = 'stem'
+
+    def restart(n):
+        """題號從頭開始：新 Case；把上一個 Case 結尾屬於新病例的段落搬過來。"""
+        nonlocal cur, sub, mode
+        stem = ''
+        if cur and cur['subs']:
+            last = cur['subs'][-1]
+            buf = last['ans'] if last['ans'] else []
+            idx = None
+            for i, l in enumerate(buf):
+                if STEM_START.match(unglyph(l)):
+                    idx = i
+            if idx is not None:
+                stem = ' '.join(unglyph(x) for x in buf[idx:])
+                last['ans'] = buf[:idx]
+        cur = new_case('', stem)
+        cases.append(cur)
+        sub = None
+        mode = 'stem'
+
+    def start_sub(n, rest_q):
+        nonlocal cur, sub, mode
+        if cur is None or (sub is not None and cur['subs'] and num(n) <= num(cur['subs'][-1]['num'])):
+            restart(n)
+        elif cur is None:
+            restart(n)
+        sub = new_sub(n, rest_q.strip())
+        cur['subs'].append(sub)
+        mode = 'q'
+
+    for ev in events:
+        kind = ev[0]
+        if kind == 'row':
+            m = QINLINE.match(ev[1].split('\n')[0].strip())
+            qrest = ' '.join(join_wrapped(ev[1].split('\n', 1)[1])) if '\n' in ev[1] else m.group(2)
+            start_sub(m.group(1), qrest)
+            for l in join_wrapped(ev[2]):
+                sub['ans'].append(l)
+            mode = 'a'
+        elif kind == 'cont' and sub:
+            sub['q'] = (sub['q'] + ' ' + ' '.join(join_wrapped(ev[1]))).strip()
+            sub['ans'] += join_wrapped(ev[2])
+        elif kind == 'qcont' and sub:
+            sub['q'] = (sub['q'] + ' ' + ' '.join(join_wrapped(ev[1]))).strip()
+        elif kind == 'acont' and sub:
+            sub['ans'] += join_wrapped(ev[1])
+        elif kind == 'text':
+            for l in join_wrapped(ev[1]):
+                s = unglyph(l)
+                if re.match(r'^第[一二三四五六七八九十]波', s) or re.match(r'^\(?（?\(?\d+[)）]\s*115年口試|^115年口試', s):
+                    continue
+                if CASE.match(s) and not QINLINE.match(s):
+                    cur = new_case(re.sub(r'\s+', ' ', s))
+                    cases.append(cur)
+                    sub, mode = None, 'stem'
+                    continue
+                m = QINLINE.match(s)
+                if m and re.match(r'^第\s*[0-9一二三四五六七八九十]+\s*題\s*[:：]?', s):
+                    start_sub(m.group(1), m.group(2))
+                    continue
+                if re.match(r'^Answer\s*[:：]', s, re.I):
+                    mode = 'a'
+                    rest = re.sub(r'^Answer\s*[:：]\s*', '', s, flags=re.I)
+                    if sub is not None and rest:
+                        sub['ans'].append(rest)
+                    continue
+                if cur is None:
+                    cur = new_case('')
+                    cases.append(cur)
+                if sub is None:
+                    cur['stem'] = (cur['stem'] + ' ' + s).strip()
+                elif mode == 'q' and not (l[:1] in GLYPH):
+                    sub['q'] = (sub['q'] + ' ' + s).strip()
+                else:
+                    mode = 'a'
+                    sub['ans'].append(bullet(l))
+    for c in cases:
+        for s in c['subs']:
+            s['ans'] = [l for l in s['ans'] if l.strip()]
+    return cases
+
+
+# ------------------------------------------------------------------ 輸出與檢查
+def check(case, src):
+    f = []
+    if not case['subs']:
+        f.append('沒有偵測到任何小題')
+    if not case['stem'].strip():
+        f.append('沒有病例敘述')
+    if len(case['subs']) == 1:
+        f.append('只有 1 個小題，請確認是否漏題')
+    nums = [num(s['num']) for s in case['subs']]
+    if nums and nums != list(range(1, len(nums) + 1)):
+        f.append('小題編號不連續：' + '、'.join(s['num'] for s in case['subs']))
+    for s in case['subs']:
+        if not s['q'].strip():
+            f.append('第%s題抓不到題目文字' % s['num'])
+        if not ' '.join(s['ans']).strip():
+            f.append('第%s題沒有文字詳解%s' % (s['num'], '（可能只有圖）' if s['pics'] else ''))
+    return f
+
+
+def render(case, domain, idx, src):
+    label = case['label'] or ('%s Case %d' % (os.path.splitext(os.path.basename(src))[0], idx))
+    head = '【' + (domain + '｜' if domain else '') + label + '】'
+    q = head + ('病例：' + case['stem'] + ' ' if case['stem'].strip() else '')
+    q += ' '.join('（第%s題）%s' % (s['num'], s['q']) for s in case['subs'])
+    blocks = []
+    for s in case['subs']:
+        a = ['■ 第%s題' % s['num']]
+        a += s['ans'] or ['（沒有文字詳解）']
+        if s['cp']:
+            a.append('【給分點】' + ' '.join(s['cp']))
+        a.append('【出處】' + ('；'.join(dict.fromkeys(s['src'])) if s['src'] else '待查（原檔未標示）'))
+        if s['pics']:
+            a.append('【圖片】詳解頁含 %d 張圖，請回原檔對照' % s['pics'])
+        blocks.append('\n'.join(a))
+    return 'Q: ' + q + '\nA: ' + '\n\n'.join(blocks)
+
+
+def convert_file(path):
+    ext = os.path.splitext(path)[1].lower()
+    if ext == '.pptx':
+        return parse_slides(pptx_slides(path)), 'PPT 投影片'
+    doc = pdf_pages(path)
+    if is_slide_pdf(doc):
+        return pdf_slide_cases(doc), 'PDF（投影片式）'
+    return pdf_doc_cases(doc), 'PDF（文件式，準確度較低）'
+
+
+def main():
+    ap = argparse.ArgumentParser(description='口試題目（PPT / PDF）-> 口試練習頁匯入格式')
+    ap.add_argument('paths', nargs='+', help='.pptx / .pdf 檔或資料夾')
+    ap.add_argument('--domain', default='', help='領域，例如 "01 結石"')
+    ap.add_argument('-o', '--output', default='', help='輸出檔（UTF-8）')
+    args = ap.parse_args()
+    paths = []
+    for a in args.paths:
+        if os.path.isdir(a):
+            paths += sorted(os.path.join(a, f) for f in os.listdir(a) if f.lower().endswith(('.pptx', '.pdf')))
+        else:
+            paths.append(a)
+    if not paths:
+        sys.exit('找不到 .pptx 或 .pdf 檔')
+    out, report, total = [], [], 0
+    for p in paths:
+        try:
+            cases, kind = convert_file(p)
+        except ImportError as e:
+            sys.exit('缺少套件：%s。請執行 pip install python-pptx pymupdf' % e.name)
+        cases = [c for c in cases if c['subs']]
+        sys.stderr.write('%s [%s]：%d 個 Case、%d 個小題\n' % (os.path.basename(p), kind, len(cases), sum(len(c['subs']) for c in cases)))
+        for i, c in enumerate(cases, 1):
+            total += 1
+            out.append(render(c, args.domain, i, p))
+            for fl in check(c, p):
+                report.append('%s 第 %d 個 Case（%s）：%s' % (os.path.basename(p), i, (c['label'] or c['stem'])[:24], fl))
+    sys.stderr.write('共 %d 個 Case\n' % total)
+    if not args.domain:
+        sys.stderr.write('提醒：沒有指定 --domain，匯入後會被歸為「未分類」。\n')
+    if report:
+        shown = report[:25]
+        sys.stderr.write('\n需要核對（共 %d 項，先列前 %d 項）：\n' % (len(report), len(shown)) + '\n'.join('  - ' + r for r in shown) + '\n')
+        if args.output:
+            rp = os.path.splitext(args.output)[0] + '_核對清單.txt'
+            with open(rp, 'w', encoding='utf-8', newline='\n') as f:
+                f.write('\n'.join(report) + '\n')
+            sys.stderr.write('完整清單已寫入 %s\n' % rp)
+    else:
+        sys.stderr.write('自動檢查沒有發現問題（仍請抽查）。\n')
+    text = '\n\n'.join(out) + '\n'
+    if args.output:
+        with open(args.output, 'w', encoding='utf-8', newline='\n') as f:
+            f.write(text)
+        sys.stderr.write('已寫入 %s\n' % args.output)
+    else:
+        sys.stdout.reconfigure(encoding='utf-8')
+        sys.stdout.write(text)
+
+
+if __name__ == '__main__':
+    main()
