@@ -64,7 +64,7 @@ def new_case(label='', stem=''):
 
 
 def new_sub(n, q=''):
-    return {'num': cn(n), 'q': q, 'ans': [], 'cp': [], 'src': [], 'pics': 0}
+    return {'num': cn(n), 'q': q, 'ans': [], 'cp': [], 'src': [], 'pics': 0, 'pages': []}
 
 
 def add_answer_line(sub, l, state):
@@ -89,9 +89,9 @@ def add_answer_line(sub, l, state):
 
 # ------------------------------------------------------------------ 投影片（PPT / 投影片式 PDF）
 def parse_slides(slides):
-    """slides: [(lines, pics)]"""
+    """slides: [(lines, pics)]，頁碼 = 順序（從 1 開始）"""
     cases, cur, sub = [], None, None
-    for lines, pics in slides:
+    for page_no, (lines, pics) in enumerate(slides, 1):
         lines = [l for l in lines if l.strip() and not NOISE.search(l.strip())]
         if not lines:
             continue
@@ -127,12 +127,14 @@ def parse_slides(slides):
                 continue
             sub = target
             sub['pics'] += pics
+            sub['pages'].append(page_no)
             st = {'in_cp': False}
             for l in lines[1:]:
                 add_answer_line(sub, l, st)
             continue
         if sub is not None:                       # 續頁：併入最近一題
             sub['pics'] += pics
+            sub['pages'].append(page_no)
             st = {'in_cp': False}
             for l in lines:
                 if SRC.search(l) or CP.match(l.strip().lstrip(GLYPH + ' ')):
@@ -351,7 +353,8 @@ def check(case, src):
         if not s['q'].strip():
             f.append('第%s題抓不到題目文字' % s['num'])
         if not ' '.join(s['ans']).strip():
-            f.append('第%s題沒有文字詳解%s' % (s['num'], '（可能只有圖）' if s['pics'] else ''))
+            pg = '、'.join(str(p) for p in dict.fromkeys(s['pages']))
+            f.append('NOANS|第%s題|%s|%s' % (s['num'], pg, '答案頁含 %d 張圖' % s['pics'] if s['pics'] else ''))
     return f
 
 
@@ -363,7 +366,7 @@ def render(case, domain, idx, src):
     blocks = []
     for s in case['subs']:
         a = ['■ 第%s題' % s['num']]
-        a += s['ans'] or ['（沒有文字詳解）']
+        a += s['ans'] or ['（沒有文字詳解，待補）']
         if s['cp']:
             a.append('【給分點】' + ' '.join(s['cp']))
         a.append('【出處】' + ('；'.join(dict.fromkeys(s['src'])) if s['src'] else '待查（原檔未標示）'))
@@ -397,7 +400,7 @@ def main():
             paths.append(a)
     if not paths:
         sys.exit('找不到 .pptx 或 .pdf 檔')
-    out, report, total = [], [], 0
+    out, report, noans, total = [], [], [], 0
     for p in paths:
         try:
             cases, kind = convert_file(p)
@@ -409,20 +412,33 @@ def main():
             total += 1
             out.append(render(c, args.domain, i, p))
             for fl in check(c, p):
-                report.append('%s 第 %d 個 Case（%s）：%s' % (os.path.basename(p), i, (c['label'] or c['stem'])[:24], fl))
+                name = '%s 第 %d 個 Case（%s）' % (os.path.basename(p), i, (c['label'] or c['stem'])[:24])
+                if fl.startswith('NOANS|'):
+                    _, qn, pg, note = fl.split('|')
+                    noans.append('%s %s：原檔第 %s 頁%s' % (name, qn, pg or '？', '（%s）' % note if note else ''))
+                else:
+                    report.append('%s：%s' % (name, fl))
     sys.stderr.write('共 %d 個 Case\n' % total)
     if not args.domain:
         sys.stderr.write('提醒：沒有指定 --domain，匯入後會被歸為「未分類」。\n')
+    if noans:
+        sys.stderr.write('\n【完全沒有文字詳解，請手動補上】（共 %d 題）：\n' % len(noans) + '\n'.join('  - ' + r for r in noans) + '\n')
+        sys.stderr.write('  輸出檔裡這些小題的詳解是「（沒有文字詳解，待補）」，用記事本搜尋「待補」就能找到。\n')
     if report:
         shown = report[:25]
         sys.stderr.write('\n需要核對（共 %d 項，先列前 %d 項）：\n' % (len(report), len(shown)) + '\n'.join('  - ' + r for r in shown) + '\n')
         if args.output:
             rp = os.path.splitext(args.output)[0] + '_核對清單.txt'
             with open(rp, 'w', encoding='utf-8', newline='\n') as f:
-                f.write('\n'.join(report) + '\n')
+                f.write(('【沒有文字詳解，請手動補上】\n' + '\n'.join(noans) + '\n\n' if noans else '') + '【其他需要核對】\n' + '\n'.join(report) + '\n')
             sys.stderr.write('完整清單已寫入 %s\n' % rp)
-    else:
+    elif not noans:
         sys.stderr.write('自動檢查沒有發現問題（仍請抽查）。\n')
+    if noans and not report and args.output:
+        rp = os.path.splitext(args.output)[0] + '_核對清單.txt'
+        with open(rp, 'w', encoding='utf-8', newline='\n') as f:
+            f.write('【沒有文字詳解，請手動補上】\n' + '\n'.join(noans) + '\n')
+        sys.stderr.write('清單已寫入 %s\n' % rp)
     text = '\n\n'.join(out) + '\n'
     if args.output:
         with open(args.output, 'w', encoding='utf-8', newline='\n') as f:
