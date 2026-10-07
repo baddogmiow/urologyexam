@@ -56,7 +56,10 @@ def unglyph(s):
 def bullet(l):
     """行首的 ❖、• 等符號統一成「• 」，沒有符號的行不動。"""
     l = l.strip()
-    return '• ' + unglyph(l) if l and l[0] in GLYPH else l
+    if l and l[0] in GLYPH:
+        u = unglyph(l)
+        return u if re.match(r'^\d+[.)、．]', u) else '• ' + u
+    return l
 
 
 def new_case(label='', stem=''):
@@ -88,12 +91,24 @@ def add_answer_line(sub, l, state):
 
 
 # ------------------------------------------------------------------ 投影片（PPT / 投影片式 PDF）
+ANS = re.compile(r'^\s*(?:ans(?:wer)?|解答|答)\s*[:：]\s*(.*)$', re.I)
+GRADING = re.compile(r'考官評分|評分重點|評分標準')
+
+
 def parse_slides(slides):
-    """slides: [(lines, pics)]，頁碼 = 順序（從 1 開始）"""
+    """slides: [(lines, pics)]，頁碼 = 順序（從 1 開始）。
+    支援兩種投影片寫法：
+      A. 題目頁「第N題」＋ 解答頁「第N題: 解答」
+      B. 「第N題」頁裡用「Ans:」分隔題目與答案（題目與答案可同頁或分頁）
+    沒有標題的續頁併入前一題的詳解；Case 之後、第一題之前的續頁併入病例敘述；
+    「考官評分」頁整份附在該 Case 最後一題後面。"""
     cases, cur, sub = [], None, None
     for page_no, (lines, pics) in enumerate(slides, 1):
         lines = [l for l in lines if l.strip() and not NOISE.search(l.strip())]
-        if not lines:
+        if not lines:                             # 純圖片頁
+            if sub is not None:
+                sub['pics'] += pics
+                sub['pages'].append(page_no)
             continue
         head = unglyph(lines[0])
         if CASE.match(head):
@@ -104,43 +119,68 @@ def parse_slides(slides):
         if cur is None:
             cur = new_case('')
             cases.append(cur)
-        m = QM.match(head)
-        if m:
-            sub = new_sub(m.group(1), '')
-            cur['subs'].append(sub)
-            st = {'in_cp': False}
-            q = []
-            for l in lines[1:]:
-                if CP.match(l.strip().lstrip(GLYPH + ' ')):
-                    add_answer_line(sub, l.strip().lstrip(GLYPH + ' '), st)
-                elif st['in_cp']:
-                    sub['cp'].append(unglyph(l))
-                else:
-                    q.append(unglyph(l))
-            sub['q'] = ' '.join(q)
+        if GRADING.search(head):
+            cur['grading'] = [unglyph(x) for x in lines[1:]] if len(head) < 6 else [re.sub(r'^考官評分\s*', '', unglyph(lines[0]))] + [unglyph(x) for x in lines[1:]]
+            if sub is not None:
+                sub['pages'].append(page_no)
             continue
-        m = AM.match(head)
+        m = QM.match(head) or AM.match(head)
         if m:
             n = cn(m.group(1))
-            target = next((s for s in cur['subs'] if s['num'] == n), None) or sub
-            if target is None:
-                continue
-            sub = target
-            sub['pics'] += pics
-            sub['pages'].append(page_no)
+            body = lines[1:]
+            existing = next((x for x in cur['subs'] if x['num'] == n), None)
+            # 找「Ans:」分隔行
+            split = None
+            for i, l in enumerate(body):
+                if ANS.match(unglyph(l)):
+                    split = i
+                    break
+            if existing is None:
+                sub = new_sub(n, '')
+                cur['subs'].append(sub)
+                qlines, alines = (body[:split], body[split:]) if split is not None else (body, [])
+            else:
+                sub = existing
+                qlines, alines = (body[:split], body[split:]) if split is not None else ([], body)
+                if sub['q'].strip():
+                    qlines = []                   # 已經有題目，這頁的前半段不再當題目
             st = {'in_cp': False}
-            for l in lines[1:]:
-                add_answer_line(sub, l, st)
-            continue
-        if sub is not None:                       # 續頁：併入最近一題
-            sub['pics'] += pics
-            sub['pages'].append(page_no)
-            st = {'in_cp': False}
-            for l in lines:
-                if SRC.search(l) or CP.match(l.strip().lstrip(GLYPH + ' ')):
-                    add_answer_line(sub, l.strip().lstrip(GLYPH + ' '), st)
+            q = []
+            for l in qlines:
+                ul = unglyph(l)
+                if CP.match(ul) or st['in_cp']:
+                    add_answer_line(sub, l, st) if CP.match(ul) else sub['cp'].append(ul)
+                    st['in_cp'] = True
                 else:
-                    sub['ans'].append(l)
+                    q.append(ul)
+            if q:
+                sub['q'] = (sub['q'] + ' ' + ' '.join(q)).strip()
+            st = {'in_cp': False}
+            for l in alines:
+                mm = ANS.match(unglyph(l))
+                if mm:
+                    if mm.group(1).strip():
+                        add_answer_line(sub, mm.group(1), st)
+                    continue
+                add_answer_line(sub, l, st)
+            sub['pics'] += pics
+            if alines or existing is not None:
+                sub['pages'].append(page_no)
+            continue
+        # 沒有標題的續頁
+        if not cur['subs']:                       # 病例敘述的續頁
+            cur['stem'] = (cur['stem'] + ' ' + ' '.join(unglyph(x) for x in lines)).strip()
+            continue
+        sub['pics'] += pics
+        sub['pages'].append(page_no)
+        st = {'in_cp': False}
+        for l in lines:
+            mm = ANS.match(unglyph(l))
+            if mm:
+                if mm.group(1).strip():
+                    add_answer_line(sub, mm.group(1), st)
+                continue
+            add_answer_line(sub, l, st)
     return cases
 
 
@@ -165,11 +205,13 @@ def pptx_slides(path):
 def join_wrapped(text):
     """合併 PDF 的硬換行：項目符號、編號、第N題、Case、Answer 開頭才算新的一行。"""
     start = re.compile(r'^\s*(?:[' + re.escape(GLYPH) + r'\-–]|\d+[.)、．]|[A-Za-z][.)]\s|[①-⑩]|\(\d+\)|第\s*[0-9一二三四五六七八九十]+\s*(?:小)?題|Case\b|Answer\s*[:：]|Ref\b|Checkpoint)', re.I)
+    text = re.sub('[\ue000-\uf8ff]', '❖', text)      # Wingdings 等私有字元其實是項目符號
+    heading = re.compile(r'^\s*(?:第\s*[0-9一二三四五六七八九十]+\s*(?:小)?題\s*[:：]?|[❖•●○◆·▪■□➢➤⚫\s]*Case\s*[0-9A-Za-z\-]*\s*[:：]?|(?:Ans(?:wer)?|解答)\s*[:：]?|考官評分.*)\s*$', re.I)
     out = []
     for raw in text.split('\n'):
         if not raw.strip():
             continue
-        if out and not start.match(raw):
+        if out and not start.match(raw) and not heading.match(out[-1]):
             out[-1] += raw
         else:
             out.append(raw)
@@ -359,7 +401,8 @@ def check(case, src):
 
 
 def render(case, domain, idx, src):
-    label = case['label'] or ('%s Case %d' % (os.path.splitext(os.path.basename(src))[0], idx))
+    base = os.path.splitext(os.path.basename(src))[0]
+    label = (base + ' ' + case['label']) if case['label'] else ('%s Case %d' % (base, idx))
     head = '【' + (domain + '｜' if domain else '') + label + '】'
     q = head + ('病例：' + case['stem'] + ' ' if case['stem'].strip() else '')
     q += ' '.join('（第%s題）%s' % (s['num'], s['q']) for s in case['subs'])
@@ -372,6 +415,8 @@ def render(case, domain, idx, src):
         a.append('【出處】' + ('；'.join(dict.fromkeys(s['src'])) if s['src'] else '待查（原檔未標示）'))
         if s['pics']:
             a.append('【圖片】詳解頁含 %d 張圖，請回原檔對照' % s['pics'])
+        if s is case['subs'][-1] and case.get('grading'):
+            a.append('【考官評分】' + ' '.join(case['grading']))
         blocks.append('\n'.join(a))
     return 'Q: ' + q + '\nA: ' + '\n\n'.join(blocks)
 
