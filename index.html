@@ -596,6 +596,31 @@ body{
   #app{border-left:1px solid var(--border);border-right:1px solid var(--border);}
 }
 
+
+/* ---------- extras: spaced repetition / oral / flags ---------- */
+.srs-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:12px;}
+.srs-row{display:flex;gap:10px;margin-bottom:10px;}
+.srs-row .stat-chip{flex:1;}
+.srs-plan{font-size:.82rem;color:var(--muted);line-height:1.7;margin:0 0 10px;}
+.srs-plan input{background:var(--surface-2);color:var(--ink);border:1px solid var(--border);border-radius:8px;padding:6px 8px;font-family:inherit;font-size:.85rem;}
+.srs-note{font-size:.72rem;color:var(--muted-2);margin:8px 0 0;line-height:1.6;}
+.tool-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;}
+.tool-btn{font-family:inherit;font-size:.8rem;background:var(--surface-2);color:var(--muted);border:1px solid var(--border);border-radius:999px;padding:8px 12px;cursor:pointer;}
+.tool-btn.on{color:var(--amber);border-color:rgba(224,176,116,.5);background:var(--amber-dim);}
+.tool-input{width:100%;margin-top:10px;background:var(--surface-2);color:var(--ink);border:1px solid var(--border);border-radius:10px;padding:10px;font-family:inherit;font-size:.85rem;resize:vertical;min-height:56px;}
+.oral-wrap{padding:calc(var(--safe-top) + 16px) 16px calc(var(--safe-bottom) + 28px);display:flex;flex-direction:column;gap:12px;}
+.oral-top{display:flex;align-items:center;gap:10px;}
+.oral-top h1{font-size:1.15rem;margin:0;flex:1;}
+.oral-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;cursor:pointer;}
+.oral-item .oq{font-size:.92rem;line-height:1.6;}
+.oral-item .om{font-size:.75rem;color:var(--muted-2);margin-top:4px;}
+.oral-timer{font-size:2rem;font-weight:600;text-align:center;color:var(--accent);}
+.oral-timer.over{color:var(--incorrect);}
+.oral-ans{width:100%;min-height:160px;background:var(--surface-2);color:var(--ink);border:1px solid var(--border);border-radius:12px;padding:12px;font-family:inherit;font-size:.95rem;line-height:1.7;resize:vertical;}
+.rate-row{display:flex;gap:8px;}
+.rate-row .btn{flex:1;justify-content:center;min-height:48px;padding:10px;font-size:.9rem;}
+.oral-model{white-space:pre-wrap;font-size:.88rem;line-height:1.8;color:var(--muted);}
+.toast{position:fixed;left:50%;bottom:calc(var(--safe-bottom) + 90px);transform:translateX(-50%);background:var(--surface-3);color:var(--ink);padding:10px 16px;border-radius:999px;font-size:.85rem;z-index:50;border:1px solid var(--border);}
 </style>
 </head>
 <body>
@@ -672,6 +697,36 @@ body{
         <button class="btn btn-secondary btn-block" id="btn-browse-wrong" disabled>
           <span class="btn-main">瀏覽錯題本（看題目＋答案）</span>
           <span class="btn-sub" id="btn-browse-wrong-sub">目前 0 題</span>
+        </button>
+      </section>
+
+
+      <section class="home-section">
+        <h2 class="section-title">間隔複習 (FSRS)</h2>
+        <div class="srs-card">
+          <div class="srs-row">
+            <div class="stat-chip"><span class="stat-num" id="srs-due">0</span><span class="stat-label">今日到期</span></div>
+            <div class="stat-chip"><span class="stat-num" id="srs-new">0</span><span class="stat-label">未做新題</span></div>
+            <div class="stat-chip"><span class="stat-num" id="srs-pred">–</span><span class="stat-label">預測落點</span></div>
+          </div>
+          <p class="srs-plan">考試日期：<input type="date" id="exam-date"> <span id="exam-plan"></span></p>
+          <button class="btn btn-primary btn-block" id="btn-srs-today">
+            <span class="btn-main">開始今日複習</span>
+            <span class="btn-sub" id="btn-srs-today-sub">到期題 + 今日新題</span>
+          </button>
+          <p class="srs-note">每題依你的作答排下次複習時間，快忘記時再出現。預測落點＝所有題目目前預估記得的機率平均（未做過以 20% 猜對計），僅供參考。</p>
+        </div>
+      </section>
+
+      <section class="home-section">
+        <h2 class="section-title">口試練習 · 待查詳解</h2>
+        <button class="btn btn-secondary btn-block" id="btn-oral">
+          <span class="btn-main">口試練習（先答再看詳解）</span>
+          <span class="btn-sub" id="btn-oral-sub">0 題</span>
+        </button>
+        <button class="btn btn-secondary btn-block" id="btn-flag-export" disabled>
+          <span class="btn-main">複製待查題目（給 AI 查核）</span>
+          <span class="btn-sub" id="btn-flag-export-sub">0 題</span>
         </button>
       </section>
 
@@ -795,6 +850,11 @@ body{
             <div class="explain-label">解析 / 參考資料</div>
             <p class="explain-text" id="explain-ref"></p>
           </div>
+          <div class="tool-row">
+            <button class="tool-btn" id="btn-flag" type="button">🚩 標記待查</button>
+            <button class="tool-btn" id="btn-copy-ai" type="button">複製 AI 提示詞</button>
+          </div>
+          <textarea class="tool-input" id="flag-note" placeholder="筆記 / 為什麼覺得詳解有問題（選填）" hidden></textarea>
         </div>
       </div>
     </div>
@@ -834,6 +894,69 @@ body{
       <button class="btn btn-review btn-block" id="btn-summary-review" disabled>複習錯題本</button>
       <button class="btn btn-secondary btn-block" id="btn-summary-restart">再刷一輪</button>
       <button class="btn btn-ghost btn-block" id="btn-summary-home">回首頁</button>
+    </div>
+  </section>
+
+  <!-- ================= ORAL SCREEN ================= -->
+  <section id="screen-oral" class="screen">
+    <div class="oral-wrap">
+      <div class="oral-top">
+        <button class="icon-btn" id="btn-oral-exit" aria-label="返回">
+          <svg viewBox="0 0 24 24" width="22" height="22"><path d="M15 18l-6-6 6-6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <h1 id="oral-title">口試練習</h1>
+      </div>
+
+      <div id="oral-list-view">
+        <div class="srs-card">
+          <div class="explain-label">匯入口試考古題</div>
+          <p class="srs-note">每題一個區塊、區塊間空一行。以「Q:」開頭是題目，「A:」開頭是詳解（可多行、可省略）。也可貼 JSON：[{"q":"...","a":"..."}]。詳解會先藏起來，答完才顯示。</p>
+          <textarea class="tool-input" id="oral-import" style="min-height:110px" placeholder="Q: 請說明 PSA 篩檢的適應症與限制&#10;A: 定義… 鑑別… 檢查… 治療… 預後…"></textarea>
+          <div class="tool-row">
+            <button class="tool-btn" id="btn-oral-import" type="button">匯入</button>
+            <button class="tool-btn" id="btn-oral-clear" type="button">清空口試題庫</button>
+            <button class="tool-btn" id="btn-oral-export" type="button">複製作答紀錄</button>
+          </div>
+        </div>
+        <div id="oral-list" style="display:flex;flex-direction:column;gap:8px;margin-top:12px"></div>
+      </div>
+
+      <div id="oral-practice-view" hidden>
+        <div class="srs-card">
+          <div class="explain-label" id="oral-qmeta"></div>
+          <h2 class="quiz-question" id="oral-question" style="margin:8px 0 0"></h2>
+        </div>
+        <div class="srs-card">
+          <div class="oral-timer mono" id="oral-timer">00:00</div>
+          <div class="tool-row" style="justify-content:center;margin-top:6px">
+            <select class="tool-btn" id="oral-limit">
+              <option value="180">限時 3 分</option>
+              <option value="300" selected>限時 5 分</option>
+              <option value="480">限時 8 分</option>
+              <option value="0">不限時</option>
+            </select>
+            <button class="tool-btn" id="btn-oral-mic" type="button">🎤 語音輸入</button>
+          </div>
+        </div>
+        <textarea class="oral-ans" id="oral-answer" placeholder="開口回答（語音會轉成文字），或直接打字。先不要看詳解。"></textarea>
+        <button class="btn btn-primary btn-block" id="btn-oral-finish" style="margin-top:12px">完成作答，看詳解</button>
+
+        <div id="oral-review" hidden>
+          <div class="srs-card" style="margin-top:12px">
+            <div class="explain-label">詳解（對照你的回答）</div>
+            <p class="oral-model" id="oral-model"></p>
+          </div>
+          <div class="explain-label" style="margin:12px 0 8px">自評（決定下次何時再出現）</div>
+          <div class="rate-row">
+            <button class="btn btn-review" data-rate="1" type="button">沒答出來</button>
+            <button class="btn btn-secondary" data-rate="2" type="button">部分</button>
+            <button class="btn btn-mock" data-rate="3" type="button">掌握</button>
+          </div>
+          <button class="btn btn-secondary btn-block" id="btn-oral-ai" style="margin-top:12px">
+            <span class="btn-main">複製「AI 考官追問＋評分」提示詞</span>
+          </button>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -910,6 +1033,9 @@ function resetState(){
   G.totalCorrect = 0;
   G.session = null;
   saveState();
+  X = { fsrs: {}, flags: {}, notes: {}, oral: { bank: [], records: {} }, examDate: '' };
+  xSave();
+  document.getElementById('exam-date').value = '';
   refreshHomeStats();
 }
 
@@ -930,7 +1056,8 @@ var screens = {
   quiz: document.getElementById('screen-quiz'),
   summary: document.getElementById('screen-summary'),
   flash: document.getElementById('screen-flash'),
-  wrongbrowse: document.getElementById('screen-wrongbrowse')
+  wrongbrowse: document.getElementById('screen-wrongbrowse'),
+  oral: document.getElementById('screen-oral')
 };
 
 function showScreen(name){
@@ -1042,6 +1169,7 @@ function refreshHomeStats(){
   browseSub.textContent = '目前 ' + wrongCount + ' 題';
 
   refreshResumeBanner();
+  if (typeof refreshSrsHome === 'function') refreshSrsHome();
 }
 
 function startAll(){
@@ -1255,6 +1383,7 @@ function applyAnswerVisuals(q, letter, progressMsgOverride){
   refEl.textContent = q.reference && q.reference.trim() ? q.reference : '（此題無額外參考資料）';
 
   document.getElementById('quiz-explain').hidden = false;
+  refreshFlagUi();
   document.getElementById('quiz-accuracy').textContent =
     '答對率 ' + (round.answered ? Math.round(round.correct / round.answered * 100) + '%' : '—');
 
@@ -1291,6 +1420,7 @@ function selectOption(letter){
     progressMsg = '已加入錯題本，需連續答對 ' + MASTERY_STREAK + ' 次才會移除';
   }
 
+  fsrsReview(q.id, isCorrect ? 3 : 1);
   applyAnswerVisuals(q, letter, justMastered ? ('🎉 已連續答對 ' + MASTERY_STREAK + ' 次，此題已從錯題本移除！') : (progressMsg || null));
   saveSession(letter);
   refreshHomeStats();
@@ -1455,6 +1585,347 @@ function exitWrongBrowse(){
   showScreen('home');
 }
 
+
+/* =====================================================================
+   Extras：FSRS 間隔複習 / 口試練習 / 待查標記
+   ===================================================================== */
+var X_KEY = 'urology_quiz_extra_v1';
+var X = { fsrs: {}, flags: {}, notes: {}, oral: { bank: [], records: {} }, examDate: '' };
+var NEW_PER_DAY_DEFAULT = 20;
+
+function xLoad(){
+  try{
+    var raw = window.localStorage.getItem(X_KEY);
+    if (raw){
+      var p = JSON.parse(raw);
+      if (p && typeof p === 'object'){
+        X.fsrs = p.fsrs || {}; X.flags = p.flags || {}; X.notes = p.notes || {};
+        X.oral = p.oral && p.oral.bank ? p.oral : { bank: [], records: {} };
+        X.examDate = p.examDate || '';
+      }
+    }
+  }catch(e){}
+}
+function xSave(){
+  try{ window.localStorage.setItem(X_KEY, JSON.stringify(X)); }catch(e){}
+}
+function toast(msg){
+  var t = document.createElement('div');
+  t.className = 'toast'; t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(function(){ t.remove(); }, 1800);
+}
+function copyText(text, okMsg){
+  function done(){ toast(okMsg || '已複製'); }
+  if (navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(done, function(){ fallback(); });
+  } else fallback();
+  function fallback(){
+    var ta = document.createElement('textarea');
+    ta.value = text; document.body.appendChild(ta); ta.select();
+    try{ document.execCommand('copy'); done(); }catch(e){ window.prompt('請手動複製：', text); }
+    ta.remove();
+  }
+}
+
+/* ---- FSRS-4.5 (預設參數) ---- */
+var FW = [0.4872,1.4003,3.7145,13.8206,5.1618,1.2298,0.8975,0.031,1.6474,0.1367,1.0461,2.1072,0.0793,0.3246,1.587,0.2272,2.8755];
+var F_DECAY = -0.5, F_FACTOR = 19/81, DAY = 86400000;
+function clampD(d){ return Math.min(10, Math.max(1, d)); }
+function retrievability(c, now){
+  var t = Math.max(0, (now - c.last) / DAY);
+  return Math.pow(1 + F_FACTOR * t / c.s, F_DECAY);
+}
+/* grade: 1 Again, 2 Hard, 3 Good */
+function fsrsReview(id, grade){
+  var now = Date.now();
+  var c = X.fsrs[id];
+  if (!c){
+    c = { s: FW[grade-1], d: clampD(FW[4] - FW[5]*(grade-3)), last: now, due: 0, reps: 1, lapses: grade === 1 ? 1 : 0 };
+  } else {
+    var r = retrievability(c, now);
+    var d = clampD(FW[7]*FW[4] + (1-FW[7])*(c.d - FW[6]*(grade-3)));
+    if (grade === 1){
+      c.s = Math.max(0.1, FW[11]*Math.pow(c.d,-FW[12])*(Math.pow(c.s+1,FW[13])-1)*Math.exp((1-r)*FW[14]));
+      c.lapses++;
+    } else {
+      var hard = grade === 2 ? FW[15] : 1;
+      c.s = c.s*(1 + Math.exp(FW[8])*(11-c.d)*Math.pow(c.s,-FW[9])*(Math.exp((1-r)*FW[10])-1)*hard);
+    }
+    c.d = d; c.last = now; c.reps++;
+  }
+  // 目標記憶保留率 90% → 間隔 = s
+  var days = grade === 1 ? 0 : Math.max(1, Math.round(c.s));
+  c.due = grade === 1 ? now + 10*60000 : now + days*DAY;
+  X.fsrs[id] = c;
+  xSave();
+}
+function dueQuestions(){
+  var now = Date.now();
+  return QUESTIONS.filter(function(q){ var c = X.fsrs[q.id]; return c && c.due <= now; })
+    .sort(function(a,b){ return X.fsrs[a.id].due - X.fsrs[b.id].due; });
+}
+function newQuestions(){
+  return QUESTIONS.filter(function(q){ return !X.fsrs[q.id]; });
+}
+function predictedScore(){
+  var now = Date.now(), sum = 0;
+  QUESTIONS.forEach(function(q){
+    var c = X.fsrs[q.id];
+    sum += c ? retrievability(c, now) + (1 - retrievability(c, now)) * 0.2 : 0.2;
+  });
+  return Math.round(sum / QUESTIONS.length * 100);
+}
+function dailyNewTarget(){
+  var left = newQuestions().length;
+  if (X.examDate){
+    var days = Math.ceil((new Date(X.examDate + 'T23:59:59') - Date.now()) / DAY);
+    if (days > 0) return { n: Math.max(1, Math.ceil(left / Math.max(1, days - 7))), days: days };
+  }
+  return { n: NEW_PER_DAY_DEFAULT, days: null };
+}
+function startTodayReview(){
+  var due = dueQuestions();
+  var tgt = dailyNewTarget();
+  var fresh = newQuestions();
+  // 新題依大類順序，一次集中一個領域
+  fresh.sort(function(a,b){ return a.categoryOrder - b.categoryOrder || a.number - b.number; });
+  var list = due.concat(fresh.slice(0, tgt.n));
+  if (!list.length){ toast('今天沒有要複習的題目 🎉'); return; }
+  startSession(list, '今日複習', false);
+}
+function refreshSrsHome(){
+  var due = dueQuestions().length, fresh = newQuestions().length, tgt = dailyNewTarget();
+  document.getElementById('srs-due').textContent = due;
+  document.getElementById('srs-new').textContent = fresh;
+  document.getElementById('srs-pred').textContent = predictedScore() + '%';
+  document.getElementById('btn-srs-today-sub').textContent = due + ' 到期 + ' + Math.min(fresh, tgt.n) + ' 新題';
+  document.getElementById('exam-plan').textContent = tgt.days
+    ? '剩 ' + tgt.days + ' 天，建議每天新題 ' + tgt.n + ' 題（最後 7 天留給複習）'
+    : '設定後會自動算每天新題量';
+  var flagged = Object.keys(X.flags).filter(function(id){ return X.flags[id] && QUESTIONS_BY_ID[id]; });
+  var fb = document.getElementById('btn-flag-export');
+  fb.disabled = flagged.length === 0;
+  document.getElementById('btn-flag-export-sub').textContent = flagged.length + ' 題';
+  document.getElementById('btn-oral-sub').textContent = X.oral.bank.length + ' 題';
+}
+
+/* ---- 題目 → 文字 / AI 提示詞 ---- */
+function qToText(q){
+  var opts = OPT_LETTERS.filter(function(l){ return q.options[l]; })
+    .map(function(l){ return l + '. ' + q.options[l]; }).join('\n');
+  return '[' + q.id + '｜' + q.category + '｜原文 p.' + q.sourcePage + ']\n' + q.question + '\n' + opts +
+    '\n標示答案：' + q.answer + '\n標示出處：' + (q.reference || '（無）') +
+    (X.notes[q.id] ? '\n我的疑問：' + X.notes[q.id] : '');
+}
+var CHECK_RULES = '請只根據我提供的教科書／指引資料庫（附上書名、版本、頁碼）逐題查核「標示答案」與「出處」是否正確。' +
+  '輸出每題：結論（正確／有疑義／查無依據）、依據原文與頁碼、若有疑義說明理由。沒有頁碼的答案一律標「待查」，不要憑印象回答。注意書籍版本與指引是否已更新。';
+function copyAiPrompt(q){
+  copyText(CHECK_RULES + '\n\n' + qToText(q), '已複製，貼到 Claude／NotebookLM');
+}
+function exportFlagged(){
+  var list = Object.keys(X.flags).filter(function(id){ return X.flags[id] && QUESTIONS_BY_ID[id]; })
+    .map(function(id){ return qToText(QUESTIONS_BY_ID[id]); });
+  if (list.length) copyText(CHECK_RULES + '\n\n' + list.join('\n\n---\n\n'), '已複製 ' + list.length + ' 題');
+}
+function currentQuizQ(){ return round.list[round.idx]; }
+function refreshFlagUi(){
+  var q = currentQuizQ(); if (!q) return;
+  var on = !!X.flags[q.id];
+  var b = document.getElementById('btn-flag');
+  b.classList.toggle('on', on);
+  b.textContent = on ? '🚩 已標記待查' : '🚩 標記待查';
+  var n = document.getElementById('flag-note');
+  n.hidden = !on;
+  n.value = X.notes[q.id] || '';
+}
+
+/* ---- 口試 ---- */
+var oralState = { id: null, timer: null, start: 0, rec: null, recording: false };
+function parseOralImport(text){
+  text = text.trim();
+  if (!text) return [];
+  if (text.charAt(0) === '['){
+    try{
+      return JSON.parse(text).map(function(o){ return { q: String(o.q || o.question || '').trim(), a: String(o.a || o.answer || '').trim() }; })
+        .filter(function(o){ return o.q; });
+    }catch(e){ return []; }
+  }
+  return text.split(/\n\s*\n/).map(function(block){
+    var q = [], a = [], mode = 'q';
+    block.split('\n').forEach(function(line){
+      var m;
+      if ((m = line.match(/^\s*Q\s*[:：]\s*(.*)$/i))){ mode = 'q'; q.push(m[1]); }
+      else if ((m = line.match(/^\s*A\s*[:：]\s*(.*)$/i))){ mode = 'a'; a.push(m[1]); }
+      else (mode === 'q' ? q : a).push(line);
+    });
+    return { q: q.join('\n').trim(), a: a.join('\n').trim() };
+  }).filter(function(o){ return o.q; });
+}
+function renderOralList(){
+  var wrap = document.getElementById('oral-list');
+  wrap.innerHTML = '';
+  if (!X.oral.bank.length){
+    wrap.innerHTML = '<p class="srs-note">還沒有口試題。貼上歷屆口試考古題後按「匯入」。</p>';
+    return;
+  }
+  X.oral.bank.forEach(function(o, i){
+    var recs = X.oral.records[o.id] || [];
+    var el = document.createElement('div');
+    el.className = 'oral-item';
+    var qd = document.createElement('div'); qd.className = 'oq'; qd.textContent = (i+1) + '. ' + o.q;
+    var md = document.createElement('div'); md.className = 'om';
+    md.textContent = recs.length ? '已練 ' + recs.length + ' 次 · 上次自評：' + ['','沒答出來','部分','掌握'][recs[recs.length-1].rating] : '尚未練習';
+    el.appendChild(qd); el.appendChild(md);
+    el.addEventListener('click', function(){ openOralPractice(o.id); });
+    wrap.appendChild(el);
+  });
+}
+function openOral(){
+  stopOralTimer(); stopMic();
+  document.getElementById('oral-title').textContent = '口試練習';
+  document.getElementById('oral-list-view').hidden = false;
+  document.getElementById('oral-practice-view').hidden = true;
+  renderOralList();
+  showScreen('oral');
+}
+function fmtTime(sec){ var m = Math.floor(sec/60), s = sec % 60; return (m<10?'0':'')+m+':'+(s<10?'0':'')+s; }
+function stopOralTimer(){ if (oralState.timer){ clearInterval(oralState.timer); oralState.timer = null; } }
+function openOralPractice(id){
+  var o = X.oral.bank.filter(function(x){ return x.id === id; })[0]; if (!o) return;
+  oralState.id = id;
+  document.getElementById('oral-list-view').hidden = true;
+  document.getElementById('oral-practice-view').hidden = false;
+  document.getElementById('oral-review').hidden = true;
+  document.getElementById('btn-oral-finish').hidden = false;
+  document.getElementById('oral-qmeta').textContent = '口試題';
+  document.getElementById('oral-question').textContent = o.q;
+  document.getElementById('oral-answer').value = '';
+  document.getElementById('oral-timer').classList.remove('over');
+  document.getElementById('oral-timer').textContent = '00:00';
+  oralState.start = Date.now();
+  stopOralTimer();
+  oralState.timer = setInterval(tickOral, 500);
+  showScreen('oral');
+}
+function oralElapsed(){ return Math.round((Date.now() - oralState.start) / 1000); }
+function tickOral(){
+  var limit = +document.getElementById('oral-limit').value, el = oralElapsed();
+  var t = document.getElementById('oral-timer');
+  if (limit){ var left = limit - el; t.textContent = (left < 0 ? '-' : '') + fmtTime(Math.abs(left)); t.classList.toggle('over', left < 0); }
+  else t.textContent = fmtTime(el);
+}
+function toggleMic(){
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR){ toast('此瀏覽器不支援語音輸入，請用手機鍵盤的麥克風'); return; }
+  if (oralState.recording){ stopMic(); return; }
+  var rec = new SR();
+  rec.lang = 'zh-TW'; rec.continuous = true; rec.interimResults = false;
+  var ta = document.getElementById('oral-answer');
+  rec.onresult = function(e){
+    for (var i = e.resultIndex; i < e.results.length; i++){
+      if (e.results[i].isFinal) ta.value += e.results[i][0].transcript;
+    }
+  };
+  rec.onend = function(){ if (oralState.recording) { try{ rec.start(); }catch(err){ stopMic(); } } };
+  rec.onerror = function(){ stopMic(); };
+  try{ rec.start(); }catch(err){ return; }
+  oralState.rec = rec; oralState.recording = true;
+  document.getElementById('btn-oral-mic').classList.add('on');
+  document.getElementById('btn-oral-mic').textContent = '⏺ 錄音中（點擊停止）';
+}
+function stopMic(){
+  oralState.recording = false;
+  if (oralState.rec){ try{ oralState.rec.stop(); }catch(e){} oralState.rec = null; }
+  var b = document.getElementById('btn-oral-mic');
+  b.classList.remove('on'); b.textContent = '🎤 語音輸入';
+}
+function oralCurrent(){ return X.oral.bank.filter(function(x){ return x.id === oralState.id; })[0]; }
+function finishOral(){
+  stopOralTimer(); stopMic();
+  oralState.sec = oralElapsed();
+  var o = oralCurrent();
+  document.getElementById('oral-model').textContent = o && o.a ? o.a : '（這題沒有附詳解，請用 AI 或教科書對照）';
+  document.getElementById('oral-review').hidden = false;
+  document.getElementById('btn-oral-finish').hidden = true;
+}
+function rateOral(grade){
+  var o = oralCurrent(); if (!o) return;
+  (X.oral.records[o.id] = X.oral.records[o.id] || []).push({
+    t: Date.now(), sec: oralState.sec || 0, text: document.getElementById('oral-answer').value, rating: grade
+  });
+  fsrsReview('oral:' + o.id, grade);
+  xSave();
+  toast('已記錄');
+  openOral();
+}
+function oralAiPrompt(){
+  var o = oralCurrent(); if (!o) return;
+  copyText('你是泌尿科專科醫師口試的考官。請依序做：\n' +
+    '1. 根據我下面的回答，追問 2～3 層（一次問一題，等我回答再問下一題）。\n' +
+    '2. 結束後用固定評分表逐項給分並說明：定義、鑑別診斷、檢查、治療、預後（各 0～5）。\n' +
+    '3. 對照參考詳解，指出我漏掉的重點、講錯的概念、條理混亂處，並列出該回去讀的教科書章節。\n' +
+    '4. 沒有出處的內容標「待查」，不要憑印象補充。\n\n' +
+    '【題目】\n' + o.q + '\n\n【我的回答（花了 ' + fmtTime(oralState.sec || 0) + '）】\n' + document.getElementById('oral-answer').value +
+    '\n\n【參考詳解】\n' + (o.a || '（無，請用教科書資料庫）'), '已複製，貼到 Claude 開始口試');
+}
+function exportOralRecords(){
+  var out = X.oral.bank.map(function(o){
+    var recs = X.oral.records[o.id] || [];
+    return 'Q: ' + o.q + '\n' + recs.map(function(r){
+      return '  [' + new Date(r.t).toLocaleString() + '｜' + fmtTime(r.sec) + '｜自評 ' + r.rating + '] ' + r.text;
+    }).join('\n');
+  }).join('\n\n');
+  if (out) copyText(out, '已複製作答紀錄'); else toast('沒有紀錄');
+}
+
+function wireExtras(){
+  document.getElementById('btn-srs-today').addEventListener('click', startTodayReview);
+  var ed = document.getElementById('exam-date');
+  ed.value = X.examDate;
+  ed.addEventListener('change', function(){ X.examDate = ed.value; xSave(); refreshSrsHome(); });
+  document.getElementById('btn-flag-export').addEventListener('click', exportFlagged);
+  document.getElementById('btn-oral').addEventListener('click', openOral);
+  document.getElementById('btn-oral-exit').addEventListener('click', function(){
+    if (!document.getElementById('oral-practice-view').hidden){ openOral(); return; }
+    stopOralTimer(); stopMic(); refreshHomeStats(); showScreen('home');
+  });
+  document.getElementById('btn-oral-import').addEventListener('click', function(){
+    var items = parseOralImport(document.getElementById('oral-import').value);
+    if (!items.length){ toast('沒有讀到題目，請檢查格式'); return; }
+    items.forEach(function(it){
+      X.oral.bank.push({ id: 'o' + Date.now().toString(36) + Math.random().toString(36).slice(2,6), q: it.q, a: it.a });
+    });
+    xSave(); document.getElementById('oral-import').value = '';
+    renderOralList(); toast('已匯入 ' + items.length + ' 題');
+  });
+  document.getElementById('btn-oral-clear').addEventListener('click', function(){
+    if (!X.oral.bank.length || !window.confirm('確定清空口試題庫與作答紀錄？')) return;
+    X.oral = { bank: [], records: {} };
+    Object.keys(X.fsrs).forEach(function(k){ if (k.indexOf('oral:') === 0) delete X.fsrs[k]; });
+    xSave(); renderOralList();
+  });
+  document.getElementById('btn-oral-export').addEventListener('click', exportOralRecords);
+  document.getElementById('btn-oral-mic').addEventListener('click', toggleMic);
+  document.getElementById('btn-oral-finish').addEventListener('click', finishOral);
+  document.getElementById('btn-oral-ai').addEventListener('click', oralAiPrompt);
+  document.querySelectorAll('#oral-review [data-rate]').forEach(function(b){
+    b.addEventListener('click', function(){ rateOral(+b.dataset.rate); });
+  });
+  document.getElementById('btn-flag').addEventListener('click', function(){
+    var q = currentQuizQ(); if (!q) return;
+    if (X.flags[q.id]) delete X.flags[q.id]; else X.flags[q.id] = true;
+    xSave(); refreshFlagUi(); refreshSrsHome();
+  });
+  document.getElementById('flag-note').addEventListener('input', function(e){
+    var q = currentQuizQ(); if (!q) return;
+    X.notes[q.id] = e.target.value; xSave();
+  });
+  document.getElementById('btn-copy-ai').addEventListener('click', function(){
+    var q = currentQuizQ(); if (q) copyAiPrompt(q);
+  });
+}
+
 /* ---------------- wire up ---------------- */
 document.querySelectorAll('.mode-tab').forEach(function(btn){
   btn.addEventListener('click', function(){ setHomeMode(btn.dataset.mode); });
@@ -1494,6 +1965,8 @@ document.getElementById('btn-resume-discard').addEventListener('click', discardS
 
 /* ---------------- init ---------------- */
 loadState();
+xLoad();
+wireExtras();
 buildCategoryList();
 setHomeMode('quiz');
 refreshHomeStats();
