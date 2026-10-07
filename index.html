@@ -1765,7 +1765,28 @@ function refreshFlagUi(){
 
 /* ---- 口試 ---- */
 var oralState = { id: null, timer: null, start: 0, rec: null, recording: false, mock: null, auto: false, mr: null, chunks: [], stream: null };
-function domainOf(o){ var m = o.q.match(/^【([^｜】]+)｜/); return m ? m[1] : '未分類'; }
+/* 口試領域（共 10 個，編號沿用考試分類，沒有 05 與 12） */
+var ORAL_DOMAINS = [
+  { name: '01 結石', re: /結石/ },
+  { name: '02 前列腺疾病含癌症', re: /前列腺|攝護腺/ },
+  { name: '03 腎臟輸尿管膀胱腫瘤', re: /腎臟.*輸尿管.*膀胱|腎臟\/輸尿管\/膀胱/ },
+  { name: '04 腎上腺&外生殖器腫瘤', re: /腎上腺|外生殖器/ },
+  { name: '06 排尿功能障礙&女性泌尿', re: /排尿|女性泌尿/ },
+  { name: '07 男性學', re: /男性學/ },
+  { name: '08 小兒泌尿', re: /小兒/ },
+  { name: '09 移植', re: /移植/ },
+  { name: '10 感染', re: /感染/ },
+  { name: '11 外傷', re: /外傷|創傷/ }
+];
+function domainOf(o){
+  var m = o.q.match(/^【([^｜】]+)｜/);
+  if (!m) return '未分類';
+  var raw = m[1];
+  for (var i = 0; i < ORAL_DOMAINS.length; i++){
+    if (ORAL_DOMAINS[i].re.test(raw)) return ORAL_DOMAINS[i].name;
+  }
+  return raw;
+}
 function oralShortQ(o){ return o.q.replace(/^【[^】]*】/, '').replace(/^病例：/, '').slice(0, 110); }
 function oralFmtQ(q){
   return q.replace(/\s*（第([一二三四五六七八九十]+)題）\s*/g, '\n\n第$1題：').replace(/^\n+/, '');
@@ -1797,9 +1818,11 @@ function fillDomainSelect(){
   var cur = sel.value || '';
   var counts = {};
   X.oral.bank.forEach(function(o){ var d = domainOf(o); counts[d] = (counts[d] || 0) + 1; });
+  var names = ORAL_DOMAINS.map(function(d){ return d.name; });
+  Object.keys(counts).forEach(function(d){ if (names.indexOf(d) < 0) names.push(d); });
   sel.innerHTML = '<option value="">全部領域（' + X.oral.bank.length + '）</option>' +
-    Object.keys(counts).map(function(d){ return '<option value="' + d.replace(/"/g,'&quot;') + '">' + d + '（' + counts[d] + '）</option>'; }).join('');
-  sel.value = counts[cur] ? cur : '';
+    names.map(function(d){ return '<option value="' + d.replace(/"/g,'&quot;') + '">' + d + '（' + (counts[d] || 0) + '）</option>'; }).join('');
+  sel.value = names.indexOf(cur) >= 0 ? cur : '';
 }
 function renderOralList(){
   var wrap = document.getElementById('oral-list');
