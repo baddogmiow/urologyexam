@@ -926,7 +926,7 @@ body{
             <select class="tool-btn" id="oral-domain"></select>
             <button class="tool-btn on" id="btn-oral-mock" type="button">▶ 模擬口試（7 關）</button>
           </div>
-          <p class="srs-note">模擬口試：從不同領域各抽一關，共 7 關、每關 7 分鐘。多數關有 2 個大題（各 3.5 分鐘），少數關只有 1 個大題（7 分鐘）；同一關的 2 個大題來自同一領域。時間到自動結束作答。</p>
+          <p class="srs-note">模擬口試：共 7 關、每關 7 分鐘。10 個領域每個至少出現一次；多數關有 2 個大題（各 3.5 分鐘），少數關只有 1 個大題（7 分鐘）。同一關的 2 個大題可能來自不同領域，也可能同一領域。時間到自動結束作答。</p>
         </div>
         <div id="oral-list" style="display:flex;flex-direction:column;gap:8px;margin-top:12px"></div>
       </div>
@@ -1968,27 +1968,61 @@ function stopRec(){
   if (mr && mr.state !== 'inactive'){ try{ mr.stop(); }catch(e){} }
   var b = document.getElementById('btn-oral-rec'); if (b){ b.classList.remove('on'); b.textContent = '🎙 錄音回放'; }
 }
-var MOCK_STATIONS = 7, MOCK_SINGLE = 2;   // 7 關，其中 2 關只有 1 個大題
+var MOCK_STATIONS = 7;
+/* 模擬口試：7 關，10 個領域每個至少出現一次。
+   多數關 2 個大題（各 3.5 分），少數關（1～2 關）只有 1 個大題（7 分）。
+   兩個大題可能來自不同領域，也可能同一領域。 */
 function startOralMock(){
   var bank = X.oral.bank;
   if (!bank.length){ toast('請先匯入口試題'); return; }
   var by = {};
   bank.forEach(function(o){ (by[domainOf(o)] = by[domainOf(o)] || []).push(o); });
-  var doms = shuffle(Object.keys(by)).slice(0, MOCK_STATIONS);
-  var stations = doms.length;
-  // 隨機挑出少數幾關只出 1 個大題
-  var singles = {};
-  shuffle(doms.map(function(_, i){ return i; })).slice(0, Math.min(MOCK_SINGLE, stations)).forEach(function(i){ singles[i] = true; });
-  var queue = [], meta = [];
-  doms.forEach(function(d, i){
-    var pool = shuffle(by[d]);
-    var n = (singles[i] || pool.length < 2) ? 1 : 2;
-    for (var k = 0; k < n; k++){
-      queue.push(pool[k].id);
-      meta.push({ st: i, sub: k, n: n, limit: n === 2 ? 210 : 420 });
+  var have = ORAL_DOMAINS.map(function(d){ return d.name; }).filter(function(n){ return by[n]; });
+  var missing = ORAL_DOMAINS.map(function(d){ return d.name; }).filter(function(n){ return !by[n]; });
+  if (!have.length){ toast('題庫沒有可歸類的領域'); return; }
+  var singles = Math.random() < 0.5 ? 1 : 2;
+  var sizes = [];
+  for (var i = 0; i < MOCK_STATIONS; i++) sizes.push(i < singles ? 1 : 2);
+  var capacity = sizes.reduce(function(a, b){ return a + b; }, 0);
+  var totalCases = bank.filter(function(o){ return by[domainOf(o)]; }).length;
+  capacity = Math.min(capacity, totalCases);
+  // 先放每個領域各一題，剩下的名額隨機補（每個領域最多用到它的 Case 數）
+  var picks = shuffle(have);
+  var used = {}; have.forEach(function(d){ used[d] = 1; });
+  while (picks.length < capacity){
+    var cand = have.filter(function(d){ return used[d] < by[d].length; });
+    if (!cand.length) break;
+    var d = cand[Math.floor(Math.random() * cand.length)];
+    used[d]++; picks.push(d);
+  }
+  picks = shuffle(picks);
+  var pool = {};
+  have.forEach(function(d){ pool[d] = shuffle(by[d]); });
+  // 約一半的機率，讓某個重複出現的領域同時放在同一關（兩個大題同領域）
+  var pairDom = null;
+  if (Math.random() < 0.5){
+    var cnt = {}; picks.forEach(function(d){ cnt[d] = (cnt[d] || 0) + 1; });
+    var dups = Object.keys(cnt).filter(function(d){ return cnt[d] >= 2; });
+    if (dups.length){
+      pairDom = dups[Math.floor(Math.random() * dups.length)];
+      var removed = 0;
+      picks = picks.filter(function(d){ if (d === pairDom && removed < 2){ removed++; return false; } return true; });
     }
+  }
+  var queue = [], meta = [], pos = 0, st = 0;
+  shuffle(sizes).forEach(function(n){
+    var doms;
+    if (n === 2 && pairDom){ doms = [pairDom, pairDom]; pairDom = null; }
+    else { doms = picks.slice(pos, pos + n); pos += doms.length; }
+    if (!doms.length) return;
+    doms.forEach(function(dom, k){
+      queue.push(pool[dom].shift().id);
+      meta.push({ st: st, sub: k, n: doms.length, limit: doms.length === 2 ? 210 : 420 });
+    });
+    st++;
   });
-  oralState.mock = { queue: queue, meta: meta, stations: stations, idx: 0, results: [] };
+  oralState.mock = { queue: queue, meta: meta, stations: st, idx: 0, results: [] };
+  if (missing.length) toast('題庫缺少領域：' + missing.join('、'));
   openOralPractice(queue[0]);
 }
 function oralAiPrompt(){
