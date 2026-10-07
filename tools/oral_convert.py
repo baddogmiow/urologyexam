@@ -35,7 +35,7 @@ QINLINE = re.compile(r'^第\s*([0-9一二三四五六七八九十]+)\s*題\s*[:�
 CASE = re.compile(r'^\s*case\b', re.I)
 SRC = re.compile(r'^\s*ref\b|doi|PMID|edition|guideline|et al', re.I)
 CP = re.compile(r'^\s*checkpoint\s*[:：]?', re.I)
-NOISE = re.compile(r'口試出題範例|^for考官$')
+NOISE = re.compile(r'口試出題範例\s*(?:for)?\s*考官|口試出題範例|^for考官$', re.I)
 STEM_START = re.compile(r'^(Case\b|\(?（?\d+[)）]\s*115年口試|第[一二三四五六七八九十]波|\d{2,3}\s*歲|一位|一名|一對|一個\d+個月)')
 
 
@@ -104,7 +104,8 @@ def parse_slides(slides):
     「考官評分」頁整份附在該 Case 最後一題後面。"""
     cases, cur, sub = [], None, None
     for page_no, (lines, pics) in enumerate(slides, 1):
-        lines = [l for l in lines if l.strip() and not NOISE.search(l.strip())]
+        lines = [NOISE.sub('', l).strip() for l in lines]          # 頁尾雜訊可能黏在正文後面，只刪雜訊字
+        lines = [l for l in lines if l.strip()]
         if not lines:                             # 純圖片頁
             if sub is not None:
                 sub['pics'] += pics
@@ -212,7 +213,9 @@ def join_wrapped(text):
         if not raw.strip():
             continue
         if out and not start.match(raw) and not heading.match(out[-1]):
-            out[-1] += raw
+            # 英文單字換行後要補空白（中文不用）
+            sep = ' ' if re.search(r'[A-Za-z0-9,.;:)]$', out[-1]) and re.match(r'^\s*[A-Za-z(]', raw) else ''
+            out[-1] += sep + raw.lstrip() if sep else raw
         else:
             out.append(raw)
     return [re.sub(r'[ \t]+', ' ', l).strip() for l in out if l.strip()]
