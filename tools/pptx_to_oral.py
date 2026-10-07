@@ -10,8 +10,11 @@
      ■ 第二題 ...
 
 用法：
-  python tools/pptx_to_oral.py 簡報資料夾\\ --domain "01 結石" > oral_結石.txt
-  python tools/pptx_to_oral.py a.pptx b.pptx --domain "03 腎臟輸尿管膀胱腫瘤" > oral_腫瘤.txt
+  python tools/pptx_to_oral.py 簡報資料夾 --domain "01 結石" -o oral_結石.txt
+  python tools/pptx_to_oral.py a.pptx b.pptx --domain "03 腎臟輸尿管膀胱腫瘤" -o oral_腫瘤.txt
+
+用 -o 直接寫成 UTF-8 檔案。Windows PowerShell 的 > 會把輸出轉成別的編碼，網頁讀進去會變亂碼，
+所以請用 -o，不要用 >。
 
 --domain 是這批簡報所屬的領域（網頁會依它歸類到 10 個領域）。
 領域：01 結石、02 前列腺疾病含癌症、03 腎臟輸尿管膀胱腫瘤、04 腎上腺&外生殖器腫瘤、
@@ -133,6 +136,7 @@ def main():
     ap = argparse.ArgumentParser(description='口試簡報 -> 口試練習頁匯入格式')
     ap.add_argument('paths', nargs='+', help='.pptx 檔或資料夾')
     ap.add_argument('--domain', default='', help='這批簡報的領域，例如 "01 結石"')
+    ap.add_argument('-o', '--output', default='', help='輸出檔（UTF-8）。沒有指定就印在畫面上')
     args = ap.parse_args()
     paths = []
     for a in args.paths:
@@ -150,8 +154,14 @@ def main():
     sys.stderr.write('共 %d 個 Case\n' % len(out))
     if not args.domain:
         sys.stderr.write('提醒：沒有指定 --domain，匯入後會被歸為「未分類」。\n')
-    sys.stdout.reconfigure(encoding='utf-8')
-    print('\n\n'.join(out))
+    text = '\n\n'.join(out) + '\n'
+    if args.output:
+        with open(args.output, 'w', encoding='utf-8', newline='\n') as f:
+            f.write(text)
+        sys.stderr.write('已寫入 %s\n' % args.output)
+    else:
+        sys.stdout.reconfigure(encoding='utf-8')
+        sys.stdout.write(text)
 
 
 if __name__ == '__main__':
