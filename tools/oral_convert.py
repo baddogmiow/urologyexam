@@ -31,6 +31,8 @@ NUM = '一二三四五六七八九十'
 GLYPH = '❖•●○◆·▪■□➢➤⚫'
 QM = re.compile(r'^第\s*([0-9一二三四五六七八九十]+)\s*題\s*$')
 AM = re.compile(r'^第\s*([0-9一二三四五六七八九十]+)\s*題\s*[:：]')
+QN = re.compile(r'^Q\s*(\d+)\s*$', re.I)
+QA = re.compile(r'^Q\s*(\d+)\s*Ans\s*[:：]?\s*(.*)$', re.I)
 QINLINE = re.compile(r'^第\s*([0-9一二三四五六七八九十]+)\s*題\s*[:：]?\s*(.*)$')
 CASE = re.compile(r'^\s*case\b', re.I)
 SRC = re.compile(r'^\s*ref\b|doi|PMID|edition|guideline|et al', re.I)
@@ -67,7 +69,7 @@ def new_case(label='', stem=''):
 
 
 def new_sub(n, q=''):
-    return {'num': cn(n), 'q': q, 'ans': [], 'cp': [], 'src': [], 'pics': 0, 'pages': []}
+    return {'num': cn(n), 'q': q, 'ans': [], 'cp': [], 'src': [], 'pics': 0, 'pages': [], 'diff': ''}
 
 
 def add_answer_line(sub, l, state):
@@ -117,6 +119,10 @@ def parse_slides(slides):
             cases.append(cur)
             sub = None
             continue
+        if cur is None and not (QM.match(head) or AM.match(head) or QN.match(head) or QA.match(head)):
+            cur = new_case('')                                      # 標題頁：沒有「Case N」的簡報，Case 名稱用檔名
+            cases.append(cur)
+            continue
         if cur is None:
             cur = new_case('')
             cases.append(cur)
@@ -125,7 +131,10 @@ def parse_slides(slides):
             if sub is not None:
                 sub['pages'].append(page_no)
             continue
-        m = QM.match(head) or AM.match(head)
+        m = QM.match(head) or AM.match(head) or QN.match(head) or QA.match(head)
+        diff = ''
+        if m and QA.match(head):
+            diff = QA.match(head).group(2).strip()
         if m:
             n = cn(m.group(1))
             body = lines[1:]
@@ -165,6 +174,8 @@ def parse_slides(slides):
                     continue
                 add_answer_line(sub, l, st)
             sub['pics'] += pics
+            if diff:
+                sub['diff'] = diff
             if alines or existing is not None:
                 sub['pages'].append(page_no)
             continue
@@ -387,7 +398,7 @@ def check(case, src):
     f = []
     if not case['subs']:
         f.append('沒有偵測到任何小題')
-    if not case['stem'].strip():
+    if not case['stem'].strip() and not (case['subs'] and len(case['subs'][0]['q']) >= 40):
         f.append('沒有病例敘述')
     if len(case['subs']) == 1:
         f.append('只有 1 個小題，請確認是否漏題')
@@ -414,6 +425,8 @@ def render(case, domain, idx, src):
         a = ['■ 第%s題' % s['num']]
         if s['q'].strip():
             a.append('【題目】' + s['q'].strip())
+        if s.get('diff'):
+            a.append('【難度】' + s['diff'])
         a += s['ans'] or ['（沒有文字詳解，待補）']
         if s['cp']:
             a.append('【給分點】' + ' '.join(s['cp']))
