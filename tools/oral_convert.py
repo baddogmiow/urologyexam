@@ -412,6 +412,8 @@ def render(case, domain, idx, src):
     blocks = []
     for s in case['subs']:
         a = ['■ 第%s題' % s['num']]
+        if s['q'].strip():
+            a.append('【題目】' + s['q'].strip())
         a += s['ans'] or ['（沒有文字詳解，待補）']
         if s['cp']:
             a.append('【給分點】' + ' '.join(s['cp']))
