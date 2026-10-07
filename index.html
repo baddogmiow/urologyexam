@@ -924,9 +924,9 @@ body{
         <div class="srs-card" style="margin-top:12px">
           <div class="tool-row" style="margin-top:0">
             <select class="tool-btn" id="oral-domain"></select>
-            <button class="tool-btn on" id="btn-oral-mock" type="button">▶ 模擬口試（7 關 × 7 分鐘）</button>
+            <button class="tool-btn on" id="btn-oral-mock" type="button">▶ 模擬口試（7 關）</button>
           </div>
-          <p class="srs-note">模擬口試：從不同領域隨機抽 7 個 Case，每關 7 分鐘，時間到自動結束作答。</p>
+          <p class="srs-note">模擬口試：從不同領域各抽一關，共 7 關、每關 7 分鐘。多數關有 2 個大題（各 3.5 分鐘），少數關只有 1 個大題（7 分鐘）；同一關的 2 個大題來自同一領域。時間到自動結束作答。</p>
         </div>
         <div id="oral-list" style="display:flex;flex-direction:column;gap:8px;margin-top:12px"></div>
       </div>
@@ -941,6 +941,7 @@ body{
           <div class="tool-row" style="justify-content:center;margin-top:6px">
             <select class="tool-btn" id="oral-limit">
               <option value="180">限時 3 分</option>
+              <option value="210">限時 3.5 分（兩大題的關）</option>
               <option value="420" selected>限時 7 分（考場）</option>
               <option value="300">限時 5 分</option>
               <option value="480">限時 8 分</option>
@@ -1843,10 +1844,13 @@ function openOralPractice(id){
   stopRec();
   var au = document.getElementById('oral-audio'); au.hidden = true; au.removeAttribute('src');
   var mk = oralState.mock;
-  document.getElementById('oral-title').textContent = mk ? ('模擬口試 第 ' + (mk.idx + 1) + ' / ' + mk.queue.length + ' 關') : '口試練習';
+  var mt = mk ? mk.meta[mk.idx] : null;
+  document.getElementById('oral-title').textContent = mk ? ('模擬口試 第 ' + (mt.st + 1) + ' / ' + mk.stations + ' 關 · 第 ' + (mt.sub + 1) + ' / ' + mt.n + ' 大題') : '口試練習';
   document.getElementById('oral-qmeta').textContent = domainOf(o);
   document.getElementById('oral-question').textContent = oralFmtQ(o.q.replace(/^【[^】]*】\s*/, ''));
-  if (mk) document.getElementById('oral-limit').value = '420';
+  var lim = document.getElementById('oral-limit');
+  lim.disabled = !!mk;
+  if (mk) lim.value = String(mt.limit);
   document.getElementById('oral-answer').value = '';
   document.getElementById('oral-timer').classList.remove('over');
   document.getElementById('oral-timer').textContent = '00:00';
@@ -1941,17 +1945,27 @@ function stopRec(){
   if (mr && mr.state !== 'inactive'){ try{ mr.stop(); }catch(e){} }
   var b = document.getElementById('btn-oral-rec'); if (b){ b.classList.remove('on'); b.textContent = '🎙 錄音回放'; }
 }
+var MOCK_STATIONS = 7, MOCK_SINGLE = 2;   // 7 關，其中 2 關只有 1 個大題
 function startOralMock(){
   var bank = X.oral.bank;
   if (!bank.length){ toast('請先匯入口試題'); return; }
   var by = {};
   bank.forEach(function(o){ (by[domainOf(o)] = by[domainOf(o)] || []).push(o); });
-  var doms = shuffle(Object.keys(by)), queue = [];
-  doms.forEach(function(d){ if (queue.length < 7) queue.push(shuffle(by[d])[0].id); });
-  if (queue.length < 7){
-    shuffle(bank).forEach(function(o){ if (queue.length < 7 && queue.indexOf(o.id) < 0) queue.push(o.id); });
-  }
-  oralState.mock = { queue: queue, idx: 0, results: [] };
+  var doms = shuffle(Object.keys(by)).slice(0, MOCK_STATIONS);
+  var stations = doms.length;
+  // 隨機挑出少數幾關只出 1 個大題
+  var singles = {};
+  shuffle(doms.map(function(_, i){ return i; })).slice(0, Math.min(MOCK_SINGLE, stations)).forEach(function(i){ singles[i] = true; });
+  var queue = [], meta = [];
+  doms.forEach(function(d, i){
+    var pool = shuffle(by[d]);
+    var n = (singles[i] || pool.length < 2) ? 1 : 2;
+    for (var k = 0; k < n; k++){
+      queue.push(pool[k].id);
+      meta.push({ st: i, sub: k, n: n, limit: n === 2 ? 210 : 420 });
+    }
+  });
+  oralState.mock = { queue: queue, meta: meta, stations: stations, idx: 0, results: [] };
   openOralPractice(queue[0]);
 }
 function oralAiPrompt(){
