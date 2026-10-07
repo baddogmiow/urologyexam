@@ -1751,7 +1751,9 @@ function parseOralImport(text){
         .filter(function(o){ return o.q; });
     }catch(e){ return []; }
   }
-  return text.split(/\n\s*\n/).map(function(block){
+  var qBlocks = text.split(/\n\s*\n(?=\s*Q\s*[:：])/);
+  if (!/^\s*Q\s*[:：]/.test(qBlocks[0]) && qBlocks.length === 1) qBlocks = text.split(/\n\s*\n/);
+  return qBlocks.map(function(block){
     var q = [], a = [], mode = 'q';
     block.split('\n').forEach(function(line){
       var m;
