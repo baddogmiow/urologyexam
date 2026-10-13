@@ -408,9 +408,14 @@ def check(case, src):
     for s in case['subs']:
         if not s['q'].strip():
             f.append('第%s題抓不到題目文字' % s['num'])
-        if not ' '.join(s['ans']).strip():
+        body = ' '.join(s['ans']).strip()
+        title_only = bool(body) and len(body) < 40 and s['pics'] > 0      # 只有一個標題，內容其實在圖片裡
+        if not body or title_only:
             pg = '、'.join(str(p) for p in dict.fromkeys(s['pages']))
-            f.append('NOANS|第%s題|%s|%s' % (s['num'], pg, '答案頁含 %d 張圖' % s['pics'] if s['pics'] else ''))
+            note = ('答案頁含 %d 張圖' % s['pics'] if s['pics'] else '')
+            if title_only:
+                note = '文字只有標題「%s」，詳解可能在圖片裡；%s' % (body, note)
+            f.append('NOANS|第%s題|%s|%s' % (s['num'], pg, note))
     return f
 
 
@@ -428,6 +433,9 @@ def render(case, domain, idx, src):
         if s.get('diff'):
             a.append('【難度】' + s['diff'])
         a += s['ans'] or ['（沒有文字詳解，待補）']
+        body = ' '.join(s['ans']).strip()
+        if body and len(body) < 40 and s['pics'] > 0:
+            a.append('（文字只有標題，詳解在圖片裡，待補）')
         if s['cp']:
             a.append('【給分點】' + ' '.join(s['cp']))
         a.append('【出處】' + ('；'.join(dict.fromkeys(s['src'])) if s['src'] else '待查（原檔未標示）'))
