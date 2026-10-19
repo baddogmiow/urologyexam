@@ -27,3 +27,6 @@
 
 ## 驗收流程
 Bot 產出 → 推到自己的分支或貼回頻道 → Claude 比對差異、標出矛盾 → 使用者核對 → Claude 合併。
+
+## 首腦記憶
+總協調（Claude）的分工與可用模型見 `docs/BRAIN.md`；派工工具為 `tools/ai_dispatch.py`。
