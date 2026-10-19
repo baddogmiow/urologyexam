@@ -6,7 +6,7 @@
 | 角色 | 模型 | 通道 | 用途 |
 |---|---|---|---|
 | draft | deepseek/deepseek-v4.1-flash | OpenRouter | 大量詳解草稿、格式轉換（最便宜） |
-| read | gemini-3.8-flash | Gemini API 直連 | 長文閱讀、摘要、pptx/pdf 文字整理 |
+| read | gemini-3.5-flash | Gemini API 直連 | 長文閱讀、摘要、pptx/pdf 文字整理 |
 | second | x-ai/grok-4.3 | OpenRouter | 第二意見、替代答案 |
 | check | openai/gpt-5.5 | OpenRouter | 交叉核對、找矛盾 |
 | alt | qwen/qwen3.7-plus | OpenRouter | 中文潤飾、備援 |

@@ -13,7 +13,7 @@ import argparse, json, sys, time, urllib.error, urllib.request
 ROLES = {
     # role: (provider, model, 用途)
     "draft":  ("openrouter", "deepseek/deepseek-v4.1-flash", "大量詳解草稿、格式轉換（最便宜）"),
-    "read":   ("gemini",     "gemini-3.8-flash",             "長文閱讀、摘要、整理 pptx/pdf 文字"),
+    "read":   ("gemini",     "gemini-3.5-flash",             "長文閱讀、摘要、整理 pptx/pdf 文字"),
     "second": ("openrouter", "x-ai/grok-4.3",                "第二意見、替代答案"),
     "check":  ("openrouter", "openai/gpt-5.5",               "交叉核對矛盾、查漏"),
     "alt":    ("openrouter", "qwen/qwen3.7-plus",            "中文潤飾、備援"),

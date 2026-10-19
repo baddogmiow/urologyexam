@@ -2,25 +2,35 @@
 """每週泌尿科新論文摘要：PubMed 抓近 N 天 → 便宜模型挑選並摘要 → digests/YYYY-MM-DD.md
 
 用法：python3 tools/weekly_papers.py [--days 7] [--top 12] [--out digests]
-期刊清單改 JOURNALS；摘要只依 abstract，不得補充數字（符合 AGENTS.md 出處規範）。
+期刊清單改 JOURNALS / NEJM_TERMS；摘要只依 abstract，不得補充數字（符合 AGENTS.md 出處規範）。
 """
-import argparse, datetime, json, os, sys, urllib.parse, urllib.request
+import argparse, datetime, json, os, sys, time, urllib.error, urllib.parse, urllib.request
 import xml.etree.ElementTree as ET
 
 sys.path.insert(0, os.path.dirname(__file__))
 from ai_dispatch import call
 
-JOURNALS = ["Eur Urol", "J Urol", "BJU Int", "Urology", "Eur Urol Oncol",
-            "Eur Urol Focus", "Prostate Cancer Prostatic Dis", "World J Urol",
-            "Urol Oncol", "Neurourol Urodyn", "J Endourol", "Int J Impot Res"]
+JOURNALS = ["Eur Urol", "J Urol", "BJU Int"]  # 全部收
+# NEJM 只收泌尿相關
+NEJM_TERMS = ["urolog*", "prostat*", "bladder", "urothelial", "renal cell", "kidney cancer",
+              "kidney stone", "nephrolithiasis", "urolithiasis", "testic*", "ureter*",
+              "urinary", "erectile", "hematuria", "kidney transplant*", "hypospadias"]
 EU = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/"
 
 def get(url):
-    with urllib.request.urlopen(url, timeout=120) as r:
-        return r.read()
+    for i in range(5):  # NCBI 限速約 3 次/秒，429 就退避重試
+        try:
+            with urllib.request.urlopen(url, timeout=120) as r:
+                return r.read()
+        except urllib.error.HTTPError as e:
+            if e.code != 429 or i == 4:
+                raise
+            time.sleep(2 ** i)
 
 def search(days):
-    term = "(" + " OR ".join(f'"{j}"[jour]' for j in JOURNALS) + ")"
+    nejm = " OR ".join(f"{t}[tiab]" for t in NEJM_TERMS)
+    term = ("(" + " OR ".join(f'"{j}"[jour]' for j in JOURNALS) + ")"
+            + f' OR ("N Engl J Med"[jour] AND ({nejm}))')
     q = urllib.parse.urlencode({"db": "pubmed", "retmode": "json", "retmax": 80,
                                 "reldate": days, "datetype": "edat", "term": term})
     return json.loads(get(EU + "esearch.fcgi?" + q))["esearchresult"]["idlist"]
