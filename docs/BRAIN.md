@@ -31,4 +31,6 @@
 - 模型依序嘗試 read（Gemini）→ alt → draft；Gemini 偶發 502/503。期刊清單在腳本 JOURNALS。
 - 摘要只依 abstract，仍須使用者核對；PMID 可回 PubMed 查原文。
 - 範圍：Eur Urol、J Urol、BJU Int 全收；NEJM 只收泌尿關鍵字（NEJM_TERMS）。Gemini 用 gemini-3.5-flash（3.8/3.7 常因 Google 端高負載回 503，經 proxy 變 502）。
-- 排程：每週二 09:50 台灣時間（trigger `trig_01VXVE14dAExRkdJwaDqQuks`，使用者要求 10:00，提早以免延誤）。已知限制：該排程未帶 Gmail connector，自動 session 可能寄不出信，摘要仍會存進 digests/。
+- 排程：每週二 08:50 台灣時間，使用者在 claude.ai 自建（`trig_015E7VWvtuEpnwsYBQkJ7VZf`，帶 Gmail）；我先前建的 `trig_01VXVE14dAExRkdJwaDqQuks` 沒有 Gmail，已停用。
+- 失敗處理：腳本抓不到 PubMed 會印 `FAILED:` 並以非零狀態結束、不產生檔案；排程只能寄「腳本成功時印出的那個檔」，失敗就寄失敗通知，不可寄 digests/ 裡的舊檔。
+- 已知問題（2026-10-19）：排程 session 曾被 proxy 擋 eutils.ncbi.nlm.nih.gov（403），需在 Default 環境的 Network access 永久放行。

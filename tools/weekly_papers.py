@@ -67,10 +67,13 @@ def main():
     ap.add_argument("--top", type=int, default=12)
     ap.add_argument("--out", default="digests")
     a = ap.parse_args()
-    ids = search(a.days)
-    papers = fetch(ids) if ids else []
+    try:
+        ids = search(a.days)
+        papers = fetch(ids) if ids else []
+    except Exception as e:  # 抓不到 PubMed 時不產生任何檔案，讓呼叫端據實回報
+        sys.exit(f"FAILED: PubMed 抓取失敗（{e}）。未產生摘要，請勿寄送舊檔。")
     if not papers:
-        sys.exit("本期沒有符合的新文章")
+        sys.exit("EMPTY: 本期沒有符合的新文章")
     text = "\n\n".join(f"[PMID {p['pmid']}] {p['journal']}\n{p['title']}\n{p['abstract']}" for p in papers)
     top = min(a.top, len(papers))
     prompt = PROMPT.format(top=top, n=len(papers), papers=text)
@@ -84,7 +87,9 @@ def main():
         sys.exit("所有模型都失敗")
     os.makedirs(a.out, exist_ok=True)
     path = os.path.join(a.out, f"{datetime.date.today()}.md")
-    open(path, "w").write(f"# 泌尿科每週新論文 {datetime.date.today()}\n\n{body}")
+    start = datetime.date.today() - datetime.timedelta(days=a.days)
+    open(path, "w").write(f"# 泌尿科每週新論文 {datetime.date.today()}\n\n"
+                          f"資料範圍：{start} ～ {datetime.date.today()}（PubMed 收錄日）\n\n{body}")
     print(path)
 
 if __name__ == "__main__":
