@@ -25,3 +25,8 @@
 
 ## 待辦／備註
 - 目前尚未以此流程產出任何題庫內容；首個任務需使用者指定。
+
+## 每週論文摘要
+- `python3 tools/weekly_papers.py [--days 7] [--top 12]`：PubMed（eutils，需環境網路白名單）→ 模型挑選並摘要 → `digests/YYYY-MM-DD.md`。
+- 模型依序嘗試 read（Gemini）→ alt → draft；Gemini 偶發 502/503。期刊清單在腳本 JOURNALS。
+- 摘要只依 abstract，仍須使用者核對；PMID 可回 PubMed 查原文。

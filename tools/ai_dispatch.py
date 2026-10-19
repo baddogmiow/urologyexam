@@ -8,7 +8,7 @@
 OpenRouter / Gemini 的金鑰由環境 proxy 注入，本檔不含任何金鑰。
 輸出一律加「（<模型> 草稿，待核對）」標註，符合 AGENTS.md。
 """
-import argparse, json, sys, urllib.request
+import argparse, json, sys, time, urllib.error, urllib.request
 
 ROLES = {
     # role: (provider, model, 用途)
@@ -19,10 +19,16 @@ ROLES = {
     "alt":    ("openrouter", "qwen/qwen3.7-plus",            "中文潤飾、備援"),
 }
 
-def post(url, body):
+def post(url, body, tries=4):
     req = urllib.request.Request(url, json.dumps(body).encode(), {"Content-Type": "application/json"})
-    with urllib.request.urlopen(req, timeout=300) as r:
-        return json.load(r)
+    for i in range(tries):
+        try:
+            with urllib.request.urlopen(req, timeout=300) as r:
+                return json.load(r)
+        except urllib.error.HTTPError as e:
+            if e.code not in (429, 500, 502, 503, 504) or i == tries - 1:
+                raise
+            time.sleep(2 ** (i + 1))
 
 def call(role, prompt, system=None):
     provider, model, _ = ROLES[role]
@@ -34,7 +40,7 @@ def call(role, prompt, system=None):
         text = "".join(p.get("text", "") for p in d["candidates"][0]["content"]["parts"])
     else:
         msgs = ([{"role": "system", "content": system}] if system else []) + [{"role": "user", "content": prompt}]
-        d = post("https://openrouter.ai/api/v1/chat/completions", {"model": model, "messages": msgs})
+        d = post("https://openrouter.ai/api/v1/chat/completions", {"model": model, "messages": msgs, "max_tokens": 6000})
         text = d["choices"][0]["message"]["content"]
     return f"（{model} 草稿，待核對）\n{text}\n"
 
