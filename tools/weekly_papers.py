@@ -72,7 +72,8 @@ def main():
     if not papers:
         sys.exit("本期沒有符合的新文章")
     text = "\n\n".join(f"[PMID {p['pmid']}] {p['journal']}\n{p['title']}\n{p['abstract']}" for p in papers)
-    prompt = PROMPT.format(top=a.top, n=len(papers), papers=text)
+    top = min(a.top, len(papers))
+    prompt = PROMPT.format(top=top, n=len(papers), papers=text)
     for role in ("read", "alt", "draft"):  # 主通道失敗就換下一個
         try:
             body = call(role, prompt)
