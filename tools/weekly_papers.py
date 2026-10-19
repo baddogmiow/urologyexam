@@ -45,7 +45,7 @@ def fetch(ids):
         out.append({"pmid": a.findtext(".//PMID"),
                     "title": "".join(a.find(".//ArticleTitle").itertext()),
                     "journal": a.findtext(".//Journal/ISOAbbreviation"),
-                    "abstract": abst[:1800]})
+                    "abstract": abst})
     return out
 
 PROMPT = """你是泌尿科期刊速讀助理。以下是本週 PubMed 新文章（含摘要）。
