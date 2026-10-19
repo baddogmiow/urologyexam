@@ -30,3 +30,5 @@
 - `python3 tools/weekly_papers.py [--days 7] [--top 12]`：PubMed（eutils，需環境網路白名單）→ 模型挑選並摘要 → `digests/YYYY-MM-DD.md`。
 - 模型依序嘗試 read（Gemini）→ alt → draft；Gemini 偶發 502/503。期刊清單在腳本 JOURNALS。
 - 摘要只依 abstract，仍須使用者核對；PMID 可回 PubMed 查原文。
+- 範圍：Eur Urol、J Urol、BJU Int 全收；NEJM 只收泌尿關鍵字（NEJM_TERMS）。Gemini 用 gemini-3.5-flash（3.8/3.7 常因 Google 端高負載回 503，經 proxy 變 502）。
+- 排程：每週二 09:50 台灣時間（trigger `trig_01VXVE14dAExRkdJwaDqQuks`，使用者要求 10:00，提早以免延誤）。已知限制：該排程未帶 Gmail connector，自動 session 可能寄不出信，摘要仍會存進 digests/。
