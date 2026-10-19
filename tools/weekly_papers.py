@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """每週泌尿科新論文摘要：PubMed 抓近 N 天 → 便宜模型挑選並摘要 → digests/YYYY-MM-DD.md
 
-用法：python3 tools/weekly_papers.py [--days 7] [--top 12] [--out digests]
+用法：python3 tools/weekly_papers.py [--days 7] [--top 12] [--out digests] [--raw]
 期刊清單改 JOURNALS / NEJM_TERMS；摘要只依 abstract，不得補充數字（符合 AGENTS.md 出處規範）。
 """
 import argparse, datetime, json, os, sys, time, urllib.error, urllib.parse, urllib.request
@@ -66,6 +66,8 @@ def main():
     ap.add_argument("--days", type=int, default=7)
     ap.add_argument("--top", type=int, default=12)
     ap.add_argument("--out", default="digests")
+    ap.add_argument("--raw", action="store_true",
+                    help="不呼叫模型，只印出「摘要指令＋候選文章」，供沒有模型金鑰的環境由執行者自行摘要")
     a = ap.parse_args()
     try:
         ids = search(a.days)
@@ -77,6 +79,9 @@ def main():
     text = "\n\n".join(f"[PMID {p['pmid']}] {p['journal']}\n{p['title']}\n{p['abstract']}" for p in papers)
     top = min(a.top, len(papers))
     prompt = PROMPT.format(top=top, n=len(papers), papers=text)
+    if a.raw:
+        print(prompt)
+        return
     for role in ("read", "alt", "draft"):  # 主通道失敗就換下一個
         try:
             body = call(role, prompt)

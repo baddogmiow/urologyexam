@@ -34,3 +34,4 @@
 - 排程：每週二 08:50 台灣時間，使用者在 claude.ai 自建（`trig_015E7VWvtuEpnwsYBQkJ7VZf`，帶 Gmail）；我先前建的 `trig_01VXVE14dAExRkdJwaDqQuks` 沒有 Gmail，已停用。
 - 失敗處理：腳本抓不到 PubMed 會印 `FAILED:` 並以非零狀態結束、不產生檔案；排程只能寄「腳本成功時印出的那個檔」，失敗就寄失敗通知，不可寄 digests/ 裡的舊檔。
 - 已知問題（2026-10-19）：排程 session 曾被 proxy 擋 eutils.ncbi.nlm.nih.gov（403），需在 Default 環境的 Network access 永久放行。
+- 排程環境限制（2026-10-19 實測）：claude.ai「Scheduled tasks」建立的排程跑在獨立沙盒（/home/claude），介面沒有 repo／環境欄位；該沙盒連不上 eutils（需開 Settings → Capabilities → Allow network egress，尚未驗證）、沒有 Gemini/OpenRouter 金鑰（那是 Default 環境 proxy 注入的）、git push 無憑證。因此沙盒內改用 `weekly_papers.py --raw`（不呼叫模型，由排程的 Claude 自己摘要並寄信，不 push）。
