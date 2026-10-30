@@ -108,6 +108,21 @@ input[type="text"] { width: 100%; min-height: 48px; font: inherit; color: var(--
 label { font-weight: 700; font-size: 0.92rem; }
 .bubble { background: var(--bg); border: 2px solid var(--line); border-radius: 20px; padding: 12px 16px; font-family: var(--font-display); font-size: 1.5rem; font-weight: 500; overflow-wrap: anywhere; }
 .scene-card .em { font-size: 2.6rem; letter-spacing: 0.1em; }
+.stage.chat { align-items: stretch; text-align: left; gap: 10px; }
+.msg-row { display: flex; }
+.msg-row.me { justify-content: flex-end; }
+.cb { max-width: 86%; padding: 10px 14px; border-radius: 18px; background: var(--bg); border: 2px solid var(--line); font-size: 1.15rem; overflow-wrap: anywhere; }
+.msg-row.me .cb { background: var(--primary); color: var(--primary-fg); border-color: transparent; }
+.badge { display: inline-block; font-size: 0.78rem; font-weight: 700; padding: 2px 10px; border-radius: 999px; }
+.badge.err { background: var(--warn-bg); color: var(--warn); }
+.badge.up { background: var(--good-bg); color: var(--good); }
+.ck { text-align: left; width: 100%; background: var(--surface); border: 2px solid var(--line); border-radius: 12px; padding: 10px 12px; font-size: 0.98rem; min-height: 48px; }
+.ck.on { border-color: var(--good); background: var(--good-bg); }
+.fix p { margin: 0; }
+.tcard.sel { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent); }
+.seg { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn.ghost.on { background: var(--primary); color: var(--primary-fg); border-color: var(--primary); }
+h3 { font-size: 1.1rem; }
 .notice { background: var(--warn-bg); color: var(--fg); border-radius: 12px; padding: 10px 12px; font-size: 0.9rem; }
 @keyframes pop { from { transform: scale(0.7); opacity: 0.2; } to { transform: scale(1); opacity: 1; } }
 @keyframes shake { 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
@@ -166,8 +181,8 @@ label { font-weight: 700; font-size: 0.92rem; }
   var KEY = "kids_english_v1_progress";
   var S = load();
   function load() {
-    try { var j = JSON.parse(localStorage.getItem(KEY) || "null"); if (j && j.stars) { j.custom = Array.isArray(j.custom) ? j.custom : []; return j; } } catch (e) {}
-    return { stars: {}, spoken: {}, rounds: [], custom: [] };
+    try { var j = JSON.parse(localStorage.getItem(KEY) || "null"); if (j && j.stars) { j.custom = cleanCustom(j.custom); j.notes = cleanNotes(j.notes); j.talks = cleanTalks(j.talks); j.settings = cleanSettings(j.settings); return j; } } catch (e) {}
+    return { stars: {}, spoken: {}, rounds: [], custom: [], notes: [], talks: [], settings: cleanSettings(null) };
   }
   function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
   function key(t, i) { return t.id + ":" + t.items[i].w; }
@@ -195,12 +210,12 @@ label { font-weight: 700; font-size: 0.92rem; }
             vs.filter(function (v) { return /^en/i.test(v.lang); })[0] || null;
   }
   if (canSpeak) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
-  function say(text, rate) {
+  function say(text, rate, pitch) {
     if (!canSpeak) return;
     try {
       speechSynthesis.cancel();
       var u = new SpeechSynthesisUtterance(text);
-      u.lang = "en-US"; u.rate = rate || 0.7; u.pitch = 1.1;
+      u.lang = "en-US"; u.rate = rate || 0.7; u.pitch = pitch || 1.1;
       if (voice) u.voice = voice;
       speechSynthesis.speak(u);
     } catch (e) {}
@@ -247,12 +262,13 @@ label { font-weight: 700; font-size: 0.92rem; }
   var sampleFn = null;
   try {
     if (window.claude && window.claude.use) window.claude.use("sample").then(function (f) {
-      sampleFn = f || null; if (view.n === "add") render();
+      sampleFn = f || null; if (view.n === "add" || view.n === "home") render();
     }, function () {});
   } catch (e) {}
   function cleanCustom(a) {
     return (Array.isArray(a) ? a : []).filter(function (c) { return c && typeof c.w === "string" && typeof c.e === "string" && c.w && c.e; })
-      .slice(0, 60).map(function (c) { return { w: c.w, zh: typeof c.zh === "string" ? c.zh : "", e: c.e, s: typeof c.s === "string" ? c.s : "" }; });
+      .slice(0, 60).map(function (c) { return { w: nz(c.w), zh: typeof c.zh === "string" ? nz(c.zh) : "", e: nz(c.e), s: typeof c.s === "string" ? nz(c.s) : "" }; })
+      .filter(function (c) { return c.w && c.e; });
   }
   function fld(id) { return document.getElementById(id); }
   function addMsg(txt, cls) { var m = fld("addmsg"); if (m) { m.textContent = txt; m.style.color = cls === "bad" ? "var(--warn)" : "var(--good)"; } }
@@ -262,7 +278,8 @@ label { font-weight: 700; font-size: 0.92rem; }
     if (e.length > 12) return addMsg("圖案只放一個 emoji", "bad");
     if (S.custom.length >= 60) return addMsg("單字本已滿 60 個", "bad");
     if (S.custom.some(function (c) { return c.w.toLowerCase() === w.toLowerCase(); })) return addMsg("這個單字已經有了", "bad");
-    S.custom.push({ w: w, zh: zh, e: e, s: s }); save();
+    w = nz(w); if (!w) return addMsg("英文不能只有符號", "bad");
+    S.custom.push({ w: w, zh: nz(zh), e: nz(e), s: nz(s) }); save();
     view.msg = "";
     render();
     addMsg("已加入「" + w + "」", "ok");
@@ -290,6 +307,153 @@ label { font-weight: 700; font-size: 0.92rem; }
   function sceneById(id) { return SCENES.filter(function (c) { return c.id === id; })[0]; }
   function hearAny(said, oks) { return oks.some(function (o) { return heard(said, o); }); }
 
+  function seg(label, on, act, v) { return '<button class="btn sm ghost' + (on ? " on" : "") + '" data-act="' + act + '" data-v="' + v + '" aria-pressed="' + on + '">' + label + "</button>"; }
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  function nz(s) { return String(s).replace(/[<>&]/g, "").trim(); }
+  function cleanNotes(a) {
+    return (Array.isArray(a) ? a : []).filter(function (n) { return n && typeof n.said === "string" && typeof n.better === "string"; }).slice(-100)
+      .map(function (n) { return { said: nz(n.said), better: nz(n.better), why: typeof n.why === "string" ? nz(n.why) : "", d: typeof n.d === "string" ? nz(n.d) : "" }; });
+  }
+  function cleanTalks(a) {
+    return (Array.isArray(a) ? a : []).filter(function (t) { return t && typeof t.sc === "string"; }).slice(-30)
+      .map(function (t) { return { d: typeof t.d === "string" ? nz(t.d) : "", sc: nz(t.sc), n: +t.n || 0, notes: +t.notes || 0 }; });
+  }
+
+  /* free conversation: pick a partner and a place; Claude plays the other side, corrections only at the end */
+  var FB = [{ v: "gentle", l: "溫和" }, { v: "normal", l: "標準" }, { v: "detailed", l: "仔細" }];
+  var TURNS = [3, 4, 6, 8];
+  function cleanSettings(o) {
+    o = o && typeof o === "object" ? o : {};
+    return {
+      fb: ["gentle", "normal", "detailed"].indexOf(o.fb) >= 0 ? o.fb : "normal",
+      turns: [3, 4, 6, 8].indexOf(+o.turns) >= 0 ? +o.turns : 4
+    };
+  }
+  function fbName(v) { return FB.filter(function (f) { return f.v === v; })[0].l; }
+  var PARTNERS = [
+    { id: "peer", name: "同齡小朋友", who: "🧒", pitch: 1.4, zh: "一位同年紀（4～5 歲）、想一起玩的小朋友", role: "a friendly child of the same age (about 4 to 5 years old) who wants to play and be friends; talk the way a small child talks, very simply" },
+    { id: "teacher", name: "老師", who: "👩‍🏫", pitch: 1.05, zh: "一位溫柔有耐心的老師", role: "a kind, patient teacher who speaks slowly and clearly and praises effort" },
+    { id: "coach", name: "教練", who: "🏃", pitch: 0.9, zh: "一位熱情、愛鼓勵人的教練", role: "an upbeat, encouraging coach who uses short, energetic phrases and cheers the child on" }
+  ];
+  var PLACES = [
+    { id: "restaurant", name: "餐廳", em: "🍽️", zh: "餐廳（點餐）", en: "a restaurant, ordering food and drinks" },
+    { id: "school", name: "教室", em: "🏫", zh: "學校教室", en: "a classroom at school" },
+    { id: "park", name: "公園", em: "🌳", zh: "公園的遊樂場", en: "a park with a playground" },
+    { id: "icecream", name: "冰淇淋店", em: "🍦", zh: "冰淇淋店", en: "an ice cream shop" },
+    { id: "zoo", name: "動物園", em: "🦁", zh: "動物園", en: "a zoo, looking at animals" },
+    { id: "home", name: "家裡", em: "🏠", zh: "家裡的廚房（晚餐時間）", en: "a home kitchen at dinner time" }
+  ];
+  var pick = { cp: "", cpl: "" };
+  function partnerById(id) { return PARTNERS.filter(function (c) { return c.id === id; })[0]; }
+  function placeById(id) { return PLACES.filter(function (c) { return c.id === id; })[0]; }
+  function chatRules(pt, pl, cfg) {
+    var praise = cfg.fb === "gentle" ? "Praise the child often with short phrases like Great! or Nice!"
+      : cfg.fb === "detailed" ? "Praise only lightly and keep the conversation moving." : "Praise the child sometimes with short phrases like Great!";
+    return "You are role-playing a conversation with a young child, a Mandarin-speaking beginner learning English. You play " + pt.role + ". The setting is " + pl.en + ". Make the situation natural for this pair (for example, a coach in a restaurant may be having a healthy snack after practice).\n" +
+      "Rules:\n- Speak only English. Use 1 or 2 very short sentences (under 10 words each) with simple common words.\n- Ask only one easy question at a time. You will ask exactly " + cfg.turns + " questions in total, one per turn, and the child will reply " + cfg.turns + " times. After the child's last reply, say one short warm goodbye and ask nothing more.\n" +
+      "- Stay in character and be warm and sincere. " + praise + "\n" +
+      "- NEVER correct the child's English during the conversation. Do not explain grammar or say what the child should have said. If a reply is unclear, gently ask again with simpler words or offer two choices.\n" +
+      "- The child's lines come from speech recognition or typing and may contain recognition errors. Never mention that.\n- Reply with only your character's next line: no stage directions, no translations.";
+  }
+  function chatInput() {
+    var pt = partnerById(view.cp), pl = placeById(view.cpl), cfg = view.cfg;
+    var arr = [{ role: "user", content: chatRules(pt, pl, cfg) + "\n\nBegin the scene now: greet the child and ask the first easy question." }]
+      .concat(view.msgs.map(function (m) { return { role: m.role, content: m.content }; }));
+    var nChild = view.msgs.filter(function (m) { return m.role === "user"; }).length, lastI = arr.length - 1;
+    if (nChild >= cfg.turns && arr[lastI].role === "user") arr[lastI].content += "\n\n[This was the child's last reply. Say one short, warm goodbye in character. Do not ask a question.]";
+    return arr;
+  }
+  function voicePrompt(pt, pl, cfg) {
+    var k = cfg.fb === "gentle" ? "3" : cfg.fb === "detailed" ? "5 到 6" : "3 到 4";
+    var praise = cfg.fb === "gentle" ? "對話中常常用 Great! Nice! 這類短句鼓勵孩子。" : cfg.fb === "detailed" ? "對話中只給很簡短的鼓勵，讓對話順暢進行。" : "對話中偶爾用 Great! 這類短句鼓勵孩子。";
+    var tone = cfg.fb === "gentle" ? "語氣特別溫柔，先講孩子做得好的地方，只挑最重要的幾點。" : cfg.fb === "detailed" ? "回饋要具體、完整，但語氣一樣溫和真誠。" : "回饋清楚、平衡，語氣溫和真誠。";
+    return [
+      "請用英文和我的孩子練習情境對話。孩子大約 4 歲，英文是初級程度。",
+      "你扮演：" + pt.zh + "。場景：" + pl.zh + "。請讓這個組合的情境自然合理。",
+      "",
+      "對話規則：",
+      "1. 只說英文，每次 1～2 個很短的句子（10 個字以內），用簡單常見的字，一次只問一個簡單的問題。",
+      "2. 全程維持角色，語氣溫暖。" + praise,
+      "3. 你一共問 " + cfg.turns + " 個問題。孩子回答第 " + cfg.turns + " 題之後，用一句溫暖的話結束對話，不要再問問題。",
+      "4. 對話過程中絕對不要打斷或糾正孩子，也不要解釋文法。聽不懂就換更簡單的說法，或給兩個選項。",
+      "5. 語音辨識可能聽錯。明顯是辨識錯誤的字，不要算成孩子的錯。",
+      "",
+      "對話結束後，改用繁體中文給回饋。" + tone,
+      "- 先真誠稱讚孩子做得好的一件事。",
+      "- 再列出 " + k + " 個「孩子說錯的地方，或可以說得更自然的說法」，每一項寫成：你說：… ／ 更自然：… ／ 原因：…（一句話）。如果真正說錯的不夠，就用「原本正確但有更自然說法」的句子補足，並標示是「更自然」。不要編造孩子沒說過的話。",
+      "- 最後請孩子把其中 3 個說法複誦一次，然後說「練習完成」。",
+      "",
+      "現在開始：請先用英文打招呼，並問第一個問題。"
+    ].join("\n");
+  }
+
+  function sErr(c) {
+    return c === "rate_limited" ? "太頻繁或額度用完了，請稍後再試"
+      : (c === "not_granted" || c === "sampling_disabled") ? "無法使用 Claude，請確認已允許這個網頁使用"
+      : c === "invalid_json" ? "Claude 回覆的格式不對，請再試一次"
+      : "沒成功，請再試一次";
+  }
+  function askClaude() {
+    if (!sampleFn || view.thinking) return;
+    var cur = view;
+    cur.thinking = true; cur.err = ""; render();
+    sampleFn(chatInput(), { modelTier: "quick", cache: false }).then(function (r) {
+      if (view !== cur) return;
+      var txt = String((r && r.text) || "").trim();
+      cur.thinking = false;
+      if (!txt) { cur.err = sErr(""); return render(); }
+      cur.msgs.push({ role: "assistant", content: txt }); render(); say(txt, 0.7, partnerById(cur.cp).pitch);
+    }).catch(function (e) {
+      if (view !== cur) return;
+      cur.thinking = false; cur.err = sErr(e && e.code); render();
+    });
+  }
+  function listenChat() {
+    if (!SR || view.listening || view.thinking) return;
+    var cur = view, rec;
+    try { if (canSpeak) speechSynthesis.cancel(); rec = new SR(); } catch (e) { view.noMic = true; return render(); }
+    rec.lang = "en-US"; rec.interimResults = false; rec.maxAlternatives = 1; rec.continuous = false;
+    view.listening = true; view.micMsg = ""; view.micCls = "";
+    rec.onresult = function (ev) {
+      if (view !== cur) return;
+      cur.listening = false; cur.draft = ev.results[0][0].transcript; cur.micMsg = "聽到了，確認後按「送出」"; cur.micCls = "good"; render();
+    };
+    rec.onerror = function (ev) {
+      if (view !== cur) return;
+      cur.listening = false;
+      if (ev.error === "not-allowed" || ev.error === "service-not-allowed") { cur.noMic = true; cur.micMsg = "無法使用麥克風，請由大人輸入"; }
+      else if (ev.error === "no-speech") cur.micMsg = "沒聽到聲音，再按一次";
+      else if (ev.error !== "aborted") cur.micMsg = "沒辨識成功，再試一次";
+      cur.micCls = "warn"; render();
+    };
+    rec.onend = function () { if (view === cur && cur.listening) { cur.listening = false; cur.micMsg = "沒聽到聲音，再按一次"; cur.micCls = "warn"; render(); } };
+    try { rec.start(); render(); } catch (e) { view.listening = false; view.noMic = true; render(); }
+  }
+  function startReview() {
+    if (!sampleFn) return;
+    var pt = partnerById(view.cp), pl = placeById(view.cpl), cfg = view.cfg, msgs = view.msgs;
+    var rev = view = { n: "review", cp: pt.id, cpl: pl.id, cfg: cfg, msgs: msgs, label: pt.name + "・" + pl.name, loading: true, saved: {}, quiet: false, finished: false };
+    render();
+    var tr = msgs.map(function (m) { return (m.role === "user" ? "Child: " : "Partner: ") + m.content; }).join("\n");
+    var cnt = cfg.fb === "gentle" ? "exactly 3" : cfg.fb === "detailed" ? "5 to 6" : "3 to 4";
+    var tone = cfg.fb === "gentle" ? "Be extra gentle: put the most encouraging points first, pick only the most important points, and use soft wording."
+      : cfg.fb === "detailed" ? "Be specific and thorough, but always kind and sincere." : "Be balanced, kind and sincere.";
+    var prompt = "A young Mandarin-speaking child who is a beginner in English just practiced a role-play conversation (the partner was a " + pt.name + ", the setting was " + pl.en + "). The child's lines come from speech recognition or typing, so a strange word may be a recognition error; do not count an obvious recognition error as the child's mistake.\n\nTranscript:\n" + tr + "\n\n" +
+      "Task: point out what the child said wrong and a more natural way to say it. " + tone + " Reply with only a JSON object: " +
+      '{"praise": one or two sincere, warm sentences in Traditional Chinese about something the child did well, "fixes": an array of ' + cnt + ' objects {"said": the child\'s exact words, "better": a more natural beginner-friendly English version, "why": one short, kind sentence in Traditional Chinese explaining the grammar or word choice, "type": "error" or "upgrade"}}. ' +
+      'Use type "error" for real grammar or word mistakes. If the child made fewer real mistakes than that, fill the rest with type "upgrade": lines that were correct but have a more natural or richer way to say them. Never invent words the child did not say. Keep every English sentence under 10 words.';
+    sampleFn.json(prompt, { modelTier: "default" }).then(function (j) {
+      if (view !== rev) return;
+      var fx = (j && Array.isArray(j.fixes) ? j.fixes : []).filter(function (f) { return f && typeof f.said === "string" && typeof f.better === "string" && f.said && f.better; })
+        .slice(0, 6).map(function (f) { return { said: nz(f.said), better: nz(f.better), why: typeof f.why === "string" ? nz(f.why) : "", type: f.type === "error" ? "error" : "upgrade" }; });
+      if (!fx.length) throw { code: "invalid_json" };
+      rev.rv = { praise: typeof j.praise === "string" ? nz(j.praise) : "說得很棒！", fixes: fx }; rev.loading = false; render();
+    }).catch(function (e) {
+      if (view !== rev) return;
+      rev.loading = false; rev.err = sErr(e && e.code); render();
+    });
+  }
+
   /* view state */
   var view = { n: "home" };
   var app = document.getElementById("app");
@@ -314,6 +478,7 @@ label { font-weight: 700; font-size: 0.92rem; }
       return '<header><h1>小小英文樂園</h1><p class="muted">選一個主題，聽一聽、點一點、跟著說。</p></header>' +
         (canSpeak ? "" : '<div class="notice">這個瀏覽器不支援發音，請改用手機 Safari 或 Chrome 開啟。</div>') +
         '<button class="btn" data-act="scenes">🎭 情境對話 · 跟角色聊天</button>' +
+        '<button class="btn" data-act="chats">💬 自由對話 · 選對象和場景</button>' +
         '<div class="grid">' + cards + "</div>" +
         '<div class="row"><button class="btn ghost sm" data-act="add">＋ 加新單字</button><button class="btn ghost sm" data-act="parent">家長區</button></div>';
     },
@@ -379,6 +544,77 @@ label { font-weight: 700; font-size: 0.92rem; }
         '<div class="stage"><div class="big">👏</div><div class="word">Great job!</div></div>' +
         '<div class="row"><button class="btn" data-act="speak">再練一次</button><button class="btn ghost" data-act="theme">回主題</button></div>';
     },
+    chats: function () {
+      var pts = PARTNERS.map(function (c) {
+        return '<button class="tcard' + (pick.cp === c.id ? " sel" : "") + '" data-act="pcp" data-id="' + c.id + '" aria-pressed="' + (pick.cp === c.id) + '"><span class="em">' + c.who + "</span><b>" + c.name + "</b></button>";
+      }).join("");
+      var pls = PLACES.map(function (c) {
+        return '<button class="tcard' + (pick.cpl === c.id ? " sel" : "") + '" data-act="ppl" data-id="' + c.id + '" aria-pressed="' + (pick.cpl === c.id) + '"><span class="em">' + c.em + "</span><b>" + c.name + "</b></button>";
+      }).join("");
+      var ready = pick.cp && pick.cpl, st = S.settings;
+      return '<div class="top">' + backBtn("home") + "<h2>自由對話</h2></div>" +
+        '<h3>1. 想跟誰說話？</h3><div class="grid">' + pts + "</div>" +
+        '<h3>2. 在哪裡？</h3><div class="grid">' + pls + "</div>" +
+        '<p class="small muted">家長設定：回饋' + fbName(st.fb) + "・每次 " + st.turns + " 題（可在首頁的「家長區」調整）</p>" +
+        (sampleFn ? '<button class="btn" data-act="chatstart"' + (ready ? "" : " disabled") + ">開始練習（在這裡打字）</button>" : "") +
+        '<button class="btn ghost" data-act="vcopy"' + (ready ? "" : " disabled") + ">📋 複製語音練習指令</button>" +
+        '<p class="small" id="vmsg" role="status">' + esc(view.vmsg || "") + "</p>" +
+        (view.vshow ? '<textarea id="vta" readonly style="min-height:180px">' + esc(view.vtext) + "</textarea>" : "") +
+        '<p class="small muted">' + (sampleFn
+          ? "「開始練習」是文字版：對方用語音說話，孩子的回答要由大人輸入。想讓孩子開口說，請複製語音練習指令，貼到 Claude App 的語音模式。"
+          : "這個版本不能直接和 Claude 對話。請複製指令，貼到 Claude App 的語音模式，孩子就能開口對話。") + "</p>";
+    },
+    chat: function () {
+      var pt = partnerById(view.cp), pl = placeById(view.cpl), N = view.cfg.turns;
+      var nChild = view.msgs.filter(function (m) { return m.role === "user"; }).length;
+      var nAsk = view.msgs.filter(function (m) { return m.role === "assistant"; }).length;
+      var last = view.msgs[view.msgs.length - 1];
+      var over = nChild >= N && last && last.role === "assistant" && !view.thinking;
+      var bub = view.msgs.map(function (m) {
+        return '<div class="msg-row ' + (m.role === "user" ? "me" : "bot") + '"><div class="cb">' + (m.role === "user" ? "" : pt.who + " ") + esc(m.content) + "</div></div>";
+      }).join("");
+      if (view.thinking) bub += '<div class="msg-row bot"><div class="cb muted">' + pt.who + " …</div></div>";
+      var live = SR && !view.noMic, lock = view.thinking || over;
+      return '<div class="top">' + backBtn("chats") + "<h2>" + pt.who + pl.em + " " + pl.name + "</h2></div>" +
+        '<p class="small muted">' + pt.name + "・第 " + Math.min(Math.max(nAsk, 1), N) + "/" + N + " 題</p>" +
+        '<div class="stage chat" aria-live="polite">' + (bub || '<p class="muted">準備中…</p>') + "</div>" +
+        (view.err ? '<div class="notice">' + view.err + ' <button class="btn ghost sm" data-act="cretry">再試一次</button></div>' : "") +
+        (over ? '<div class="notice" style="background:var(--good-bg)">對話結束了！按下面的「看檢討」。</div>' : "") +
+        '<div class="panel"><label for="cin">孩子說的英文（用麥克風，或由大人輸入）</label>' +
+        '<textarea id="cin" style="min-height:70px" autocapitalize="none" placeholder="例如：I like chocolate."></textarea>' +
+        '<div class="row">' +
+        '<button class="btn" data-act="csend"' + (lock ? " disabled" : "") + ">送出</button>" +
+        (live ? '<button class="btn" data-act="cmic" style="background:var(--accent);color:#fff"' + (view.listening || lock ? " disabled" : "") + ">" + (view.listening ? "🎤 聽你說…" : "🎤 說說看") + "</button>" : "") +
+        '<button class="btn ghost" data-act="chear"' + (last && last.role === "assistant" ? "" : " disabled") + ">🔊 再聽</button>" +
+        "</div>" + (view.micMsg ? '<p class="msg ' + (view.micCls || "") + '" role="status">' + view.micMsg + "</p>" : "") +
+        '<button class="btn ' + (over ? "" : "ghost") + '" data-act="cend"' + (nChild < 1 || view.thinking ? " disabled" : "") + ">" + (over ? "看檢討" : "提早結束，看檢討") + "</button>" +
+        '<p class="small muted">' + (over ? "" : "對話中對方不會糾正，結束後才會出檢討。") +
+        (live ? "" : " 這裡無法使用麥克風，請由大人輸入孩子說的英文。") + "</p></div>";
+    },
+    review: function () {
+      var top = '<div class="top">' + backBtn("chats") + "<h2>對話檢討</h2></div>";
+      if (view.loading) return top + '<div class="stage"><div class="big">🔎</div><p class="muted">Claude 整理中，可能要幾十秒…</p></div>';
+      if (view.err) return top + '<div class="notice">' + view.err + '</div><div class="row"><button class="btn" data-act="rretry">再試一次</button></div>';
+      var rv = view.rv, savedN = Object.keys(view.saved).length;
+      var fixes = rv.fixes.map(function (f, i) {
+        return '<div class="panel fix"><div><span class="badge ' + (f.type === "error" ? "err" : "up") + '">' + (f.type === "error" ? "說錯了" : "更自然") + "</span></div>" +
+          "<p>你說：<b>" + esc(f.said) + "</b></p><p>更自然：<b>" + esc(f.better) + "</b></p>" +
+          '<p class="small muted">' + esc(f.why) + "</p>" +
+          '<div class="row" style="justify-content:flex-start"><button class="btn ghost sm" data-act="rsay" data-i="' + i + '">🔊 聽</button>' +
+          '<button class="btn sm" data-act="rsave" data-i="' + i + '"' + (view.saved[i] ? " disabled" : "") + ">" + (view.saved[i] ? "✓ 已記下" : "記下這個說法") + "</button></div></div>";
+      }).join("");
+      var c1 = view.quiet, c2 = rv.fixes.length >= 1, c3 = savedN >= 3, all = c1 && c2 && c3;
+      function ck(on, txt, act) { return '<button class="ck ' + (on ? "on" : "") + '"' + (act ? ' data-act="' + act + '"' : " disabled") + ' aria-pressed="' + on + '">' + (on ? "✅ " : "⬜ ") + txt + "</button>"; }
+      return top + '<div class="panel"><p><b>' + esc(rv.praise) + "</b></p></div>" + fixes +
+        '<div class="panel"><h3>完成檢核</h3>' +
+        ck(c1, "對話過程中沒有被頻繁打斷（家長確認，點一下）", view.finished ? "" : "quiet") +
+        ck(c2, "結束後有具體的文法與用字糾正", "") +
+        ck(c3, "記下至少 3 個可以改進的說法（" + Math.min(savedN, 3) + "/3）", "") +
+        (view.finished
+          ? '<div class="stage"><div class="big">🎉</div><div class="word">練習完成！</div></div><div class="row"><button class="btn" data-act="chats">再練一次</button><button class="btn ghost" data-act="home">回首頁</button></div>'
+          : '<button class="btn" data-act="rdone"' + (all ? "" : " disabled") + ">標記練習完成 ✓</button>") +
+        "</div>";
+    },
     scenes: function () {
       var cards = SCENES.map(function (c) {
         return '<button class="tcard scene-card" data-act="scene" data-id="' + c.id + '"><span class="em">' + c.em + "</span><b>" + c.name + '</b><span class="small muted">' + c.lines.length + " 句對話</span></button>";
@@ -434,6 +670,15 @@ label { font-weight: 700; font-size: 0.92rem; }
       return '<div class="top">' + backBtn("home") + "<h2>家長區</h2></div>" +
         '<div class="panel"><h3>學習進度</h3><div class="tbl"><table><tr><th>主題</th><th>練過</th><th>測驗星</th><th>跟讀</th></tr>' + rows + "</table></div></div>" +
         '<div class="panel"><h3>最近測驗</h3><div class="tbl"><table><tr><th>日期</th><th>主題</th><th>答對</th></tr>' + rounds + "</table></div></div>" +
+        '<div class="panel"><h3>自由對話設定</h3>' +
+        '<p class="small muted">AI 回饋力道（溫和：3 點、多鼓勵／標準：3～4 點／仔細：5～6 點、較具體）</p><div class="seg">' + FB.map(function (f) { return seg(f.l, S.settings.fb === f.v, "setfb", f.v); }).join("") + "</div>" +
+        '<p class="small muted">每次對話題數（AI 問幾題，孩子就回答幾次）</p><div class="seg">' + TURNS.map(function (n) { return seg(n + " 題", S.settings.turns === n, "setturns", n); }).join("") + "</div></div>" +
+        '<div class="panel"><h3>自由對話紀錄</h3><div class="tbl"><table><tr><th>日期</th><th>場景</th><th>輪數</th><th>記下</th></tr>' + (S.talks.slice(-5).reverse().map(function (r) {
+          return "<tr><td>" + esc(r.d) + "</td><td>" + esc(r.sc) + "</td><td>" + r.n + "</td><td>" + r.notes + "</td></tr>";
+        }).join("") || '<tr><td colspan="4" class="muted">還沒有完成的對話</td></tr>') + "</table></div>" +
+        '<h3>已記下的說法</h3><div class="tbl"><table>' + (S.notes.slice(-10).reverse().map(function (r) {
+          return "<tr><td>" + esc(r.said) + "</td><td>→ " + esc(r.better) + "</td></tr>";
+        }).join("") || '<tr><td class="muted">還沒有記下的說法</td></tr>') + "</table></div></div>" +
         '<div class="panel"><h3>備份與換機</h3>' +
         '<p class="small muted">進度與「我的單字本」只存在這個瀏覽器。換手機前先複製備份文字，到新裝置貼上後按匯入。匯入會取代目前進度。</p>' +
         '<textarea id="bk" aria-label="備份文字">' + "</textarea>" +
@@ -447,6 +692,10 @@ label { font-weight: 700; font-size: 0.92rem; }
     app.innerHTML = V[view.n]();
     if (view.n === "parent") document.getElementById("bk").value = JSON.stringify(S);
     if (view.n === "add") view.msg = "";
+    if (view.n === "chat") {
+      var cin = document.getElementById("cin"); if (cin) cin.value = view.draft || "";
+      window.scrollTo(0, document.documentElement.scrollHeight);
+    }
   }
 
   function startQuiz(t) {
@@ -507,6 +756,52 @@ label { font-weight: 700; font-size: 0.92rem; }
       }
       return;
     }
+    if (a === "chats") { if (canSpeak) speechSynthesis.cancel(); return go({ n: "chats" }); }
+    if (a === "pcp") { pick.cp = b.dataset.id; view.vmsg = ""; view.vshow = false; return render(); }
+    if (a === "ppl") { pick.cpl = b.dataset.id; view.vmsg = ""; view.vshow = false; return render(); }
+    if (a === "chatstart") {
+      if (!sampleFn || !pick.cp || !pick.cpl) return;
+      go({ n: "chat", cp: pick.cp, cpl: pick.cpl, cfg: { fb: S.settings.fb, turns: S.settings.turns }, msgs: [], thinking: false, draft: "", err: "", micMsg: "", noMic: false });
+      return askClaude();
+    }
+    if (a === "vcopy") {
+      if (!pick.cp || !pick.cpl) return;
+      var vt = voicePrompt(partnerById(pick.cp), placeById(pick.cpl), S.settings);
+      view.vtext = vt;
+      var fail = function () { view.vshow = true; view.vmsg = "請長按下面的文字，全選後複製"; render(); var ta = document.getElementById("vta"); if (ta) { ta.focus(); ta.select(); } };
+      try { navigator.clipboard.writeText(vt).then(function () { view.vshow = false; view.vmsg = "已複製。貼到 Claude App 的語音模式，再把手機交給孩子。"; render(); }, fail); } catch (e) { fail(); }
+      return;
+    }
+    if (a === "setfb") { S.settings.fb = cleanSettings({ fb: b.dataset.v }).fb; save(); return render(); }
+    if (a === "setturns") { S.settings.turns = cleanSettings({ turns: b.dataset.v }).turns; save(); return render(); }
+    if (a === "csend") {
+      var ct = (view.draft || "").trim().slice(0, 200);
+      if (!ct || view.thinking) return;
+      view.msgs.push({ role: "user", content: ct }); view.draft = ""; view.micMsg = "";
+      return askClaude();
+    }
+    if (a === "cretry") return askClaude();
+    if (a === "cmic") return listenChat();
+    if (a === "chear") { var lm = view.msgs[view.msgs.length - 1]; return lm && say(lm.content, 0.7, partnerById(view.cp).pitch); }
+    if (a === "cend") { if (canSpeak) speechSynthesis.cancel(); if (view.msgs.some(function (m) { return m.role === "user"; })) startReview(); return; }
+    if (a === "rretry") return startReview();
+    if (a === "quiet") { view.quiet = !view.quiet; return render(); }
+    if (a === "rsay") return say(view.rv.fixes[+b.dataset.i].better, 0.6);
+    if (a === "rsave") {
+      var ri = +b.dataset.i, rf = view.rv.fixes[ri];
+      if (!rf || view.saved[ri]) return;
+      view.saved[ri] = true;
+      if (!S.notes.some(function (n) { return n.better.toLowerCase() === rf.better.toLowerCase(); })) {
+        S.notes.push({ said: rf.said, better: rf.better, why: rf.why, d: new Date().toLocaleDateString("zh-TW") });
+        S.notes = S.notes.slice(-100);
+      }
+      save(); return render();
+    }
+    if (a === "rdone") {
+      if (view.finished || !view.quiet || Object.keys(view.saved).length < 3) return;
+      S.talks.push({ d: new Date().toLocaleDateString("zh-TW"), sc: view.label, n: view.msgs.filter(function (m) { return m.role === "user"; }).length, notes: Object.keys(view.saved).length });
+      S.talks = S.talks.slice(-30); save(); view.finished = true; return render();
+    }
     if (a === "scenes") return go({ n: "scenes" });
     if (a === "scene") { go({ n: "scene", sc: b.dataset.id, li: 0 }); return say(sceneById(b.dataset.id).lines[0].s); }
     if (a === "ssay" || a === "sslow") return say(sceneById(view.sc).lines[view.li].s, a === "sslow" ? 0.4 : 0.7);
@@ -537,13 +832,13 @@ label { font-weight: 700; font-size: 0.92rem; }
       try {
         var j = JSON.parse(document.getElementById("bk").value);
         if (!j || typeof j.stars !== "object" || j.stars === null) throw new Error("bad");
-        S = { stars: j.stars, spoken: j.spoken || {}, rounds: j.rounds || [], custom: cleanCustom(j.custom) };
+        S = { stars: j.stars, spoken: j.spoken || {}, rounds: j.rounds || [], custom: cleanCustom(j.custom), notes: cleanNotes(j.notes), talks: cleanTalks(j.talks), settings: cleanSettings(j.settings) };
         save(); m2.textContent = "已匯入"; return;
       } catch (e) { m2.textContent = "格式不正確，請貼上完整的備份文字"; return; }
     }
     if (a === "reset") {
       if (!view.confirm) { view.confirm = true; return render(); }
-      S = { stars: {}, spoken: {}, rounds: [], custom: S.custom }; save(); view.confirm = false; return render();
+      S = { stars: {}, spoken: {}, rounds: [], custom: S.custom, notes: S.notes, talks: [], settings: S.settings }; save(); view.confirm = false; return render();
     }
   }
   function startLine(li) {
@@ -642,6 +937,7 @@ label { font-weight: 700; font-size: 0.92rem; }
     try { rec.start(); render(); } catch (e) { view.listening = false; view.noMic = true; render(); }
   }
 
+  document.addEventListener("input", function (e) { if (e.target && e.target.id === "cin" && view.n === "chat") view.draft = e.target.value; });
   document.addEventListener("click", function (e) {
     var b = e.target.closest("[data-act]");
     if (b && !b.disabled) act(b.dataset.act, b);
