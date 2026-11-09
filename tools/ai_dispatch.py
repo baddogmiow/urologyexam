@@ -56,10 +56,10 @@ def main():
             for m in json.load(r)["data"]:
                 print(m["id"], m["pricing"]["prompt"], m["pricing"]["completion"])
         return
-    prompt = open(a.input).read() if a.input else sys.stdin.read()
-    system = open(a.system).read() if a.system else None
+    prompt = open(a.input, encoding="utf-8").read() if a.input else sys.stdin.read()
+    system = open(a.system, encoding="utf-8").read() if a.system else None
     out = call(a.role, prompt, system)
-    (open(a.output, "w").write(out) if a.output else print(out))
+    (open(a.output, "w", encoding="utf-8").write(out) if a.output else print(out))
 
 if __name__ == "__main__":
     main()

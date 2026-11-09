@@ -93,7 +93,7 @@ def main():
     os.makedirs(a.out, exist_ok=True)
     path = os.path.join(a.out, f"{datetime.date.today()}.md")
     start = datetime.date.today() - datetime.timedelta(days=a.days)
-    open(path, "w").write(f"# 泌尿科每週新論文 {datetime.date.today()}\n\n"
+    open(path, "w", encoding="utf-8").write(f"# 泌尿科每週新論文 {datetime.date.today()}\n\n"
                           f"資料範圍：{start} ～ {datetime.date.today()}（PubMed 收錄日）\n\n{body}")
     print(path)
 
