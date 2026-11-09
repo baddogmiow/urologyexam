@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>泌尿科門診速查</title>
 <style>
-:root{--bg:#f6f7f9;--card:#fff;--tx:#1d2330;--mut:#5d6677;--line:#dde1e8;--acc:#0f5fa8;--warn:#b42318;--warnbg:#fdecea;--chk:#8a5a00;--chkbg:#fff3d6}
-@media(prefers-color-scheme:dark){:root{--bg:#12161c;--card:#1a2029;--tx:#e8ecf2;--mut:#9aa4b5;--line:#2c3542;--acc:#6db3f2;--warn:#ff8a80;--warnbg:#3a1f1d;--chk:#f2c66d;--chkbg:#3a2f12}}
+:root{--bg:#f6f7f9;--card:#fff;--tx:#1d2330;--mut:#5d6677;--line:#dde1e8;--acc:#0f5fa8;--warn:#b42318;--warnbg:#fdecea;--chk:#8a5a00;--chkbg:#fff3d6;--exc:#13663a;--exbg:#dff3e6}
+@media(prefers-color-scheme:dark){:root{--bg:#12161c;--card:#1a2029;--tx:#e8ecf2;--mut:#9aa4b5;--line:#2c3542;--acc:#6db3f2;--warn:#ff8a80;--warnbg:#3a1f1d;--chk:#f2c66d;--chkbg:#3a2f12;--exc:#7fd6a0;--exbg:#16301f}}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.65 system-ui,"Noto Sans TC","PingFang TC",sans-serif;padding:0 16px 48px}
 main{max-width:720px;margin:0 auto}
@@ -24,6 +24,7 @@ li{margin:3px 0}
 .red{background:var(--warnbg);color:var(--warn);border-radius:8px;padding:8px 12px;margin:8px 0}
 .red ul{margin:2px 0}
 .chk{background:var(--chkbg);color:var(--chk);border-radius:4px;padding:0 5px;font-size:.8em;white-space:nowrap}
+.ex{background:var(--exbg);color:var(--exc);border-radius:4px;padding:0 5px;font-size:.8em;white-space:nowrap;margin-left:2px}
 .src{color:var(--mut);font-size:.85rem;margin-top:6px}
 footer{color:var(--mut);font-size:.85rem}
 </style>
@@ -31,7 +32,7 @@ footer{color:var(--mut);font-size:.85rem}
 <body>
 <main>
 <h1>泌尿科門診速查</h1>
-<div class="banner">（Claude 草稿，待醫師核對）本頁為個人速查筆記，不是診療依據。<span class="chk">待核對</span> 標記的數字、劑量、切點，須對照最新指引或仿單後才可採信。請勿在本頁填入可辨識病人的資料。</div>
+<div class="banner">（Claude 草稿，待醫師核對）本頁為個人速查筆記，不是診療依據。<span class="chk">待核對</span> 標記的數字、劑量、切點，須對照最新指引或仿單後才可採信。請勿在本頁填入可辨識病人的資料。<br><span class="ex">考古題</span> 標記＝已對照本 repo 內 1346 題考古題的答案與出處（多為 Campbell 第 12 版、EAU 2021–2022）。這只代表考古題的立場，指引之後可能已更新，仍須對照最新版。口試共筆不在 repo 內，尚未對照。</div>
 <nav><a href="#stone">結石</a><a href="#psa">PSA 高</a><a href="#bph">BPH＋LUTS</a><a href="#sex">性功能障礙</a></nav>
 
 <section id="stone">
@@ -40,7 +41,7 @@ footer{color:var(--mut);font-size:.85rem}
 <li>病史：疼痛、發燒、血尿、結石史、家族史、用藥</li>
 <li>尿液檢查；疑感染時加尿液培養</li>
 <li>抽血：Cr、Ca、尿酸；發燒時加 CBC、CRP</li>
-<li>影像：成人疑似結石首選低劑量非顯影 CT；孕婦、兒童先做超音波</li></ul>
+<li>影像：成人疑似結石首選非顯影 CT（敏感度約 98%、特異度約 97%，輻射約 10 mSv；超低劑量 CT 的輻射約為傳統的 1/20）<span class="ex">考古題 1-031</span><span class="ex">考古題 1-020</span>；孕婦、兒童先做超音波</li><li>孕婦：SWL 不能視為低風險的選項，上段輸尿管結石也一樣<span class="ex">考古題 1-008</span></li></ul>
 <div class="src">出處：EAU Urolithiasis（版本待查）；AUA/Endourological Society 手術處置指引（版本待查）</div></details>
 <details><summary>急性腎絞痛與排石治療</summary><ul>
 <li>止痛第一線：NSAID（注意腎功能、腸胃、心血管風險）；不足再短期加 opioid</li>
@@ -49,11 +50,12 @@ footer{color:var(--mut);font-size:.85rem}
 <div class="red"><b>需緊急處理</b><ul>
 <li>阻塞合併發燒或疑似敗血症</li><li>孤立腎或雙側阻塞、AKI</li><li>疼痛無法控制</li>
 <li>→ 先引流（DJ stent 或 PCN），感染控制後再處理結石</li></ul></div>
+<ul><li>有感染並不是「絕對不可手術」，而是先引流與抗生素，穩定後再處理<span class="ex">考古題 1-035</span></li></ul>
 <div class="src">出處：EAU Urolithiasis（版本待查）</div></details>
 <details><summary>治療選擇（依大小與位置）</summary><ul>
 <li>輸尿管 ≤10 mm：觀察／MET；需處理 → URS 或 SWL</li>
 <li>輸尿管 &gt;10 mm：近端 URS 或 SWL；遠端以 URS 為主</li>
-<li>腎結石 &lt;10 mm：SWL 或 RIRS</li>
+<li>腎結石 &lt;10 mm：SWL 或 RIRS；≤1 cm 者 URS 的結石清除率約 80–90%，與 micro-PCNL 相當<span class="ex">考古題 1-012</span><span class="ex">考古題 1-038</span></li>
 <li>腎結石 10–20 mm：SWL、RIRS、PCNL（下盞較不適合 SWL）</li>
 <li>腎結石 &gt;20 mm：PCNL</li>
 <li>無症狀腎結石：可追蹤</li></ul>
@@ -62,7 +64,8 @@ footer{color:var(--mut);font-size:.85rem}
 <li>飲水使每日尿量達約 2–2.5 L <span class="chk">待核對</span></li>
 <li>限鈉、維持正常鈣攝取（不要限鈣）、適度動物蛋白、控制體重</li>
 <li>高風險或復發者：代謝評估（含 24 小時尿液）</li>
-<li>低檸檬酸尿 → potassium citrate；高尿酸尿 → allopurinol；高鈣尿 → thiazide（劑量待查）</li></ul>
+<li>低檸檬酸尿 → potassium citrate；高尿酸尿 → allopurinol；高鈣尿 → thiazide（劑量待查；可能造成高尿酸，要注意尿酸結石<span class="ex">考古題 1-019</span>）</li>
+<li>感染性（struvite）結石：尿液酸化有助分解<span class="ex">考古題 1-021</span></li></ul>
 <div class="src">出處：AUA 結石藥物處置指引（版本待查）；EAU Urolithiasis</div></details>
 </section>
 
@@ -75,14 +78,16 @@ footer{color:var(--mut);font-size:.85rem}
 <div class="src">出處：EAU Prostate Cancer（版本待查）；AUA/SUO 早期偵測指引（版本待查）</div></details>
 <details><summary>評估風險</summary><ul>
 <li>DRE、年齡、家族史（含 BRCA 等遺傳風險）、種族</li>
-<li>PSA 密度（PSA ÷ 前列腺體積）：常用 0.15 為參考點 <span class="chk">待核對</span></li>
+<li>PSA 密度（PSA ÷ 前列腺體積）0.15–0.2 合併 PI-RADS 3：EAU 2022 建議強烈考慮切片<span class="ex">考古題 2-049</span>（版本待查）</li>
+<li>PSA 速率（PSAV）不可單獨作為切片的決定因子<span class="ex">考古題 2-011</span><span class="ex">考古題 2-069</span></li>
 <li>PSA 切點無單一絕對值，常用 3 ng/mL 作為考慮進一步評估的參考 <span class="chk">待核對</span></li>
 <li>可用風險計算工具輔助（如 ERSPC、PCPT；版本待查）</li>
 <li>共同決策：說明篩檢的好處與過度診斷風險</li></ul></details>
 <details><summary>切片前與切片</summary><ul>
 <li>建議切片前先做多參數 MRI；PI-RADS 3–5 做標靶切片，視情況加系統性切片</li>
 <li>經會陰切片可降低感染風險，指引傾向優先考慮</li>
-<li>低風險癌症：可考慮主動監測</li></ul>
+<li>經會陰切片的術後感染機率較經直腸低<span class="ex">考古題 2-082</span>；經直腸切片仍須預防性抗生素，低風險者也不能省略<span class="ex">考古題 2-017</span></li>
+<li>低風險癌症：可考慮主動監測。低風險者 10 年後約 40% 需要積極治療<span class="ex">考古題 2-053</span>；Gleason 7 者追蹤 15 年，轉移機率 ≥20%<span class="ex">考古題 2-026</span></li></ul>
 <div class="src">出處：EAU Prostate Cancer；AUA/SUO（章節與等級待查）</div></details>
 <div class="red"><b>注意</b><ul><li>PSA 很高、DRE 硬結、骨痛、血尿、腎功能惡化 → 提早轉介或進一步檢查</li></ul></div>
 </section>
@@ -97,11 +102,12 @@ footer{color:var(--mut);font-size:.85rem}
 <div class="src">出處：EAU Non-neurogenic Male LUTS；AUA BPH 指引（版本待查）</div></details>
 <details><summary>藥物（依症狀與前列腺大小選擇）</summary><ul>
 <li><b>α-blocker</b>（tamsulosin、silodosin、alfuzosin、doxazosin）：起效快；副作用：姿勢性低血壓、射精異常；<b>白內障手術前須告知（IFIS）</b>。tamsulosin 常用 0.2–0.4 mg 每日一次 <span class="chk">待核對</span></li>
-<li><b>5-ARI</b>（finasteride 5 mg、dutasteride 0.5 mg 每日）：用於前列腺較大者（常見切點約 30–40 mL 或 PSA 約 1.4–1.5）<span class="chk">待核對</span>；約 6 個月起效；性功能副作用；PSA 約減半</li>
+<li><b>5-ARI</b>（finasteride 5 mg、dutasteride 0.5 mg 每日）：用於前列腺較大者（常見切點約 30–40 mL 或 PSA 約 1.4–1.5）<span class="chk">待核對</span>；約 6 個月起效；性功能副作用；PSA 約減半；PCPT／REDUCE 顯示 5-ARI 可使前列腺癌發生風險降約 25%<span class="ex">考古題 2-093</span></li>
+<li><b>BPH 相關血尿</b>：finasteride 約九成可緩解<span class="ex">考古題 2-008</span>；仍須先完成血尿評估</li>
 <li><b>PDE5 抑制劑</b>（tadalafil 5 mg 每日）：LUTS 合併 ED 時考慮 <span class="chk">待核對</span></li>
-<li><b>抗膽鹼／β3 agonist</b>（mirabegron 等）：以儲尿症狀為主者；抗膽鹼注意餘尿與口乾便秘，mirabegron 注意血壓 <span class="chk">待核對</span></li>
+<li><b>抗膽鹼／β3 agonist</b>（mirabegron 等）：以儲尿症狀為主者；抗膽鹼注意餘尿與口乾便秘，mirabegron 注意血壓；男性使用 β3 agonist 並非不建議<span class="ex">考古題 6-031</span> <span class="chk">待核對</span></li>
 <li><b>併用</b>：α-blocker + 5-ARI（前列腺大且進展風險高者）；α-blocker + 抗膽鹼（儲尿症狀持續者）</li>
-<li>夜多尿：須先確認夜間尿量；desmopressin 注意低血鈉與年齡，使用前後查鈉 <span class="chk">待核對</span></li>
+<li>夜多尿：須先確認夜間尿量；desmopressin 注意低血鈉與年齡，使用前後查鈉；CrCl &lt;50 mL/min 不適合使用<span class="ex">考古題 6-010</span> <span class="chk">待核對</span></li>
 <li>生活調整：減少睡前水分、咖啡因與酒精</li></ul>
 <div class="src">出處：EAU Non-neurogenic Male LUTS；AUA BPH 指引（劑量與等級待查，台灣仿單為準）</div></details>
 <details><summary>手術指徵與選項</summary><ul>
@@ -114,24 +120,26 @@ footer{color:var(--mut);font-size:.85rem}
 <h2>性功能障礙</h2>
 <details open><summary>勃起功能障礙（ED）評估</summary><ul>
 <li>病史：發生方式、情境（心因或器質）、用藥、抽菸、酒精；問卷 IIEF-5 / SHIM</li>
-<li>ED 可能是心血管疾病的預警：評估心血管風險，必要時轉介</li>
+<li>ED 可能是心血管疾病的預警：評估心血管風險，必要時轉介。Princeton 分級中，未控制的高血壓屬高風險，先穩定心血管再處理<span class="ex">考古題 7-040</span></li>
+<li>檢視用藥：furosemide、propranolol、clonidine 可能造成 ED<span class="ex">考古題 7-006</span>；用非選擇性 β-blocker 者可考慮換成 CCB<span class="ex">考古題 7-046</span>；抗憂鬱藥是 ED 風險因子<span class="ex">考古題 7-021</span>；心因性與糖尿病也是重要風險因子<span class="ex">考古題 7-043</span></li>
 <li>檢查：血壓、血糖、血脂；有性慾低落或症狀者查晨間總睪固酮</li>
 <li>生活型態：運動、減重、戒菸、控制三高</li></ul>
 <div class="src">出處：EAU Sexual and Reproductive Health；AUA ED 指引（版本待查）</div></details>
 <details><summary>治療階梯</summary><ul>
 <li><b>PDE5 抑制劑（第一線）</b>：sildenafil、tadalafil、vardenafil、avanafil</li>
 <li>常見劑量：sildenafil 25–100 mg、tadalafil 10–20 mg（或每日 2.5–5 mg）、vardenafil 5–20 mg、avanafil 50–200 mg <span class="chk">待核對（以仿單為準）</span></li>
-<li>副作用：頭痛、臉潮紅、消化不良、鼻塞；罕見視力異常</li>
+<li>副作用：頭痛、臉潮紅、消化不良、鼻塞；罕見視力異常。vardenafil 與抗心律不整藥併用最需小心<span class="ex">考古題 7-017</span></li>
 <li><b>絕對禁忌：併用硝酸鹽類（nitrates）</b>；併用 α-blocker 注意低血壓；riociguat 禁用</li>
 <li>二線：真空吸引器、海綿體內注射（alprostadil）</li>
 <li>三線：陰莖假體</li>
 <li>低能量體外震波：研究中，是否推薦待查</li></ul></details>
 <details><summary>早洩與低睪固酮</summary><ul>
-<li><b>早洩</b>：終生型常以插入後射精潛伏期約 1 分鐘內為定義 <span class="chk">待核對</span>；選項：行為療法、局部麻醉劑、dapoxetine、SSRI（部分為適應症外使用）</li>
+<li><b>早洩</b>：ISSM 定義，後天型 IELT &lt;3 分鐘<span class="ex">考古題 7-028</span>；終生型約 1 分鐘內 <span class="chk">待核對</span>；選項：行為療法、局部麻醉劑、dapoxetine、SSRI（部分為適應症外使用）</li>
 <li><b>低睪固酮</b>：有症狀且兩次晨間總睪固酮偏低才考慮補充；切點各指引不同（AUA 約 300 ng/dL；EAU 另有標準）<span class="chk">待核對</span></li>
+<li>長效注射製劑半衰期：undecanoate &gt; enanthate／cypionate &gt; propionate<span class="ex">考古題 7-031</span>；心絞痛不是補充治療的禁忌症<span class="ex">考古題 7-010</span></li>
 <li>補充前評估：前列腺癌風險、PSA 與 DRE、血比容、生育需求（補充會抑制精子生成）</li></ul>
 <div class="src">出處：ISSM 早洩共識；AUA 睪固酮缺乏指引；EAU（版本待查）</div></details>
-<div class="red"><b>急症與警訊</b><ul><li>勃起超過 4 小時（缺血型陰莖異常勃起）→ 急診處理</li><li>年輕突發 ED 或外傷後 ED</li><li>陰莖彎曲或硬塊（Peyronie）→ 追蹤</li></ul></div>
+<div class="red"><b>急症與警訊</b><ul><li>勃起超過 4 小時（缺血型陰莖異常勃起）→ 急診處理。缺血型血氣約 pO2 &lt;30、pCO2 &gt;60、pH &lt;7.25；處置為海綿體抽吸／沖洗加 phenylephrine（α1 選擇性）<span class="ex">考古題 7-020</span><span class="ex">考古題 7-009</span>；alprostadil 注射後勃起超過 6 小時的機率約 1%<span class="ex">考古題 7-027</span></li><li>年輕突發 ED 或外傷後 ED</li><li>陰莖彎曲或硬塊（Peyronie）→ 追蹤；體外震波可改善疼痛與勃起功能，但對彎曲效果不佳<span class="ex">考古題 7-034</span></li></ul></div>
 </section>
 
 <footer>草稿建立：2026-11-09。核對完成的項目請移除「待核對」標記，並寫上實際出處與版本。</footer>
