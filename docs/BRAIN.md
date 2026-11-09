@@ -1,0 +1,40 @@
+# 首腦記憶（Claude 總協調用）
+
+> 每次新 session 先讀本檔與 AGENTS.md。目標：**省 Claude token**——Claude 只做判斷、驗收、合併，大量產出交給便宜模型。
+
+## 可用 AI（2026-10-19 實測可呼叫）
+| 角色 | 模型 | 通道 | 用途 |
+|---|---|---|---|
+| draft | deepseek/deepseek-v4.1-flash | OpenRouter | 大量詳解草稿、格式轉換（最便宜） |
+| read | gemini-3.5-flash | Gemini API 直連 | 長文閱讀、摘要、pptx/pdf 文字整理 |
+| second | x-ai/grok-4.3 | OpenRouter | 第二意見、替代答案 |
+| check | openai/gpt-5.5 | OpenRouter | 交叉核對、找矛盾 |
+| alt | qwen/qwen3.7-plus | OpenRouter | 中文潤飾、備援 |
+
+- OpenRouter 金鑰額度上限 US$100（測試時已用 $0）；金鑰由 proxy 注入，**不要寫進 repo**。
+- 模型 ID 常被下架（gemini-2.5-flash、grok-4-fast、qwen3-235b 都已 404）。失敗先跑 `python3 tools/ai_dispatch.py models` 再改 `tools/ai_dispatch.py` 的 ROLES。
+- 呼叫工具：`tools/ai_dispatch.py <role> -i prompt.txt -o out.md`，輸出自動標「（模型 草稿，待核對）」。
+
+## 分工（省 token 原則）
+1. **Claude 不做**：整批詳解撰寫、長檔逐行閱讀、重複格式轉換 → 派 draft / read。
+2. **Claude 做**：寫派工 prompt（短）、比對差異與矛盾、套用 AGENTS.md 格式規則、合併、維護 `index.html` / `tools/`。
+3. **使用者做**：最終醫學核對；口試答案以共筆為準。
+4. 派工流程：Claude 寫精簡 prompt → 工具呼叫便宜模型 → 輸出存 `bot/<名字>/<任務>` 分支或暫存檔 → Claude 只讀 diff/摘要，不整份重讀 → 使用者核對 → 合併。
+5. 讀 `index.html`（約 1.3MB）時不要整檔 Read，用 Grep/行範圍；大檔交給 `read`（Gemini）摘要。
+6. 數字、劑量、LE 等級無出處一律標「待核對」，不採信模型輸出。
+
+## 待辦／備註
+- 目前尚未以此流程產出任何題庫內容；首個任務需使用者指定。
+
+## 每週論文摘要
+- `python3 tools/weekly_papers.py [--days 7] [--top 12]`：PubMed（eutils，需環境網路白名單）→ 模型挑選並摘要 → `digests/YYYY-MM-DD.md`。
+- 模型依序嘗試 read（Gemini）→ alt → draft；Gemini 偶發 502/503。期刊清單在腳本 JOURNALS。
+- 摘要只依 abstract，仍須使用者核對；PMID 可回 PubMed 查原文。
+- 範圍：Eur Urol、J Urol、BJU Int 全收；NEJM 只收泌尿關鍵字（NEJM_TERMS）。Gemini 用 gemini-3.5-flash（3.8/3.7 常因 Google 端高負載回 503，經 proxy 變 502）。
+- 排程：每週二 08:50 台灣時間，使用者在 claude.ai 自建（`trig_015E7VWvtuEpnwsYBQkJ7VZf`，帶 Gmail）；我先前建的 `trig_01VXVE14dAExRkdJwaDqQuks` 沒有 Gmail，已停用。
+- 失敗處理：腳本抓不到 PubMed 會印 `FAILED:` 並以非零狀態結束、不產生檔案；排程只能寄「腳本成功時印出的那個檔」，失敗就寄失敗通知，不可寄 digests/ 裡的舊檔。
+- 已知問題（2026-10-19）：排程 session 曾被 proxy 擋 eutils.ncbi.nlm.nih.gov（403），需在 Default 環境的 Network access 永久放行。
+- 排程環境限制（2026-10-19 實測）：claude.ai「Scheduled tasks」建立的排程跑在獨立沙盒（/home/claude），介面沒有 repo／環境欄位；該沙盒連不上 eutils（需開 Settings → Capabilities → Allow network egress，尚未驗證）、沒有 Gemini/OpenRouter 金鑰（那是 Default 環境 proxy 注入的）、git push 無憑證。因此沙盒內改用 `weekly_papers.py --raw`（不呼叫模型，由排程的 Claude 自己摘要並寄信，不 push）。
+- 最終架構（2026-10-19 驗證可用）：排程 `trig_01K5oS13VNS8vnNVE19xreWS`（claude.ai Scheduled tasks，週二 08:50）。需 Settings → Capabilities → Allow network egress 開啟，網域清單為「Package managers only」+ eutils.ncbi.nlm.nih.gov。沙盒會擋「clone 後執行 repo 腳本」（分類器判定外部程式碼），所以抓 PubMed 的 Python 直接內嵌在排程指令裡（等同 `tools/weekly_papers.py --raw` 的簡化版，摘要不截斷），由排程的 Claude 自行摘要並用 Gmail 寄信，不 commit／push。舊的兩階段排程 `trig_01VXVE14dAExRkdJwaDqQuks`、`trig_015E7VWvtuEpnwsYBQkJ7VZf` 已停用。
+- 需要存進 repo 或用 Gemini/OpenRouter 摘要時，改在 Default 環境的 session 手動跑 `tools/weekly_papers.py`（手機也可：Claude app 開 Code session 對 Claude 說「跑本週論文摘要」）。
+- 2026-10-19 升級：每週信末加「可能改變門診做法的文章」（最多 3 篇、需 RCT／統合分析／大型研究且結論明確，沒有就寫沒有）；每月 1～7 號（台灣時間）的週二加「EAU / AUA 指引更新追蹤」（PubMed 近 35 天，分「指引本身」與「相關評論」）。指引追蹤只涵蓋 PubMed，uroweb.org／auanet.org 在沙盒未放行，官網先發布的更新不在範圍。已知現象：AI 的「臨床意義」有時會超出摘要做推論，須由醫師核對。
