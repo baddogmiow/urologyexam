@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>泌尿科門診速查</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--tx:#1d2330;--mut:#5d6677;--line:#dde1e8;--acc:#0f5fa8;--warn:#b42318;--warnbg:#fdecea;--chk:#8a5a00;--chkbg:#fff3d6}
+@media(prefers-color-scheme:dark){:root{--bg:#12161c;--card:#1a2029;--tx:#e8ecf2;--mut:#9aa4b5;--line:#2c3542;--acc:#6db3f2;--warn:#ff8a80;--warnbg:#3a1f1d;--chk:#f2c66d;--chkbg:#3a2f12}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.65 system-ui,"Noto Sans TC","PingFang TC",sans-serif;padding:0 16px 48px}
+main{max-width:720px;margin:0 auto}
+h1{font-size:1.35rem;margin:20px 0 4px}
+.banner{background:var(--chkbg);color:var(--chk);border-radius:10px;padding:10px 12px;font-size:.9rem;margin:10px 0 14px}
+nav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+nav a{background:var(--card);border:1px solid var(--line);color:var(--acc);padding:7px 14px;border-radius:999px;text-decoration:none;font-size:.95rem}
+section{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:6px 14px 12px;margin-bottom:16px}
+h2{font-size:1.15rem;margin:10px 0 2px;color:var(--acc)}
+details{border-top:1px solid var(--line);padding:8px 0}
+details:first-of-type{border-top:0}
+summary{cursor:pointer;font-weight:600;padding:4px 0}
+ul{margin:4px 0 4px;padding-left:1.2em}
+li{margin:3px 0}
+.red{background:var(--warnbg);color:var(--warn);border-radius:8px;padding:8px 12px;margin:8px 0}
+.red ul{margin:2px 0}
+.chk{background:var(--chkbg);color:var(--chk);border-radius:4px;padding:0 5px;font-size:.8em;white-space:nowrap}
+.src{color:var(--mut);font-size:.85rem;margin-top:6px}
+footer{color:var(--mut);font-size:.85rem}
+</style>
+</head>
+<body>
+<main>
+<h1>泌尿科門診速查</h1>
+<div class="banner">（Claude 草稿，待醫師核對）本頁為個人速查筆記，不是診療依據。<span class="chk">待核對</span> 標記的數字、劑量、切點，須對照最新指引或仿單後才可採信。請勿在本頁填入可辨識病人的資料。</div>
+<nav><a href="#stone">結石</a><a href="#psa">PSA 高</a><a href="#bph">BPH＋LUTS</a><a href="#sex">性功能障礙</a></nav>
+
+<section id="stone">
+<h2>結石 Urolithiasis</h2>
+<details open><summary>初步評估</summary><ul>
+<li>病史：疼痛、發燒、血尿、結石史、家族史、用藥</li>
+<li>尿液檢查；疑感染時加尿液培養</li>
+<li>抽血：Cr、Ca、尿酸；發燒時加 CBC、CRP</li>
+<li>影像：成人疑似結石首選低劑量非顯影 CT；孕婦、兒童先做超音波</li></ul>
+<div class="src">出處：EAU Urolithiasis（版本待查）；AUA/Endourological Society 手術處置指引（版本待查）</div></details>
+<details><summary>急性腎絞痛與排石治療</summary><ul>
+<li>止痛第一線：NSAID（注意腎功能、腸胃、心血管風險）；不足再短期加 opioid</li>
+<li>藥物排石（MET）：遠端輸尿管結石、較大者可考慮 α-blocker（如 tamsulosin）。證據有爭議，須與病人討論 <span class="chk">待核對</span></li>
+<li>觀察期限與回診間隔 <span class="chk">待核對</span></li></ul>
+<div class="red"><b>需緊急處理</b><ul>
+<li>阻塞合併發燒或疑似敗血症</li><li>孤立腎或雙側阻塞、AKI</li><li>疼痛無法控制</li>
+<li>→ 先引流（DJ stent 或 PCN），感染控制後再處理結石</li></ul></div>
+<div class="src">出處：EAU Urolithiasis（版本待查）</div></details>
+<details><summary>治療選擇（依大小與位置）</summary><ul>
+<li>輸尿管 ≤10 mm：觀察／MET；需處理 → URS 或 SWL</li>
+<li>輸尿管 &gt;10 mm：近端 URS 或 SWL；遠端以 URS 為主</li>
+<li>腎結石 &lt;10 mm：SWL 或 RIRS</li>
+<li>腎結石 10–20 mm：SWL、RIRS、PCNL（下盞較不適合 SWL）</li>
+<li>腎結石 &gt;20 mm：PCNL</li>
+<li>無症狀腎結石：可追蹤</li></ul>
+<div class="src">以上大小切點 <span class="chk">待核對</span>；出處：EAU Urolithiasis（章節待查）</div></details>
+<details><summary>預防復發</summary><ul>
+<li>飲水使每日尿量達約 2–2.5 L <span class="chk">待核對</span></li>
+<li>限鈉、維持正常鈣攝取（不要限鈣）、適度動物蛋白、控制體重</li>
+<li>高風險或復發者：代謝評估（含 24 小時尿液）</li>
+<li>低檸檬酸尿 → potassium citrate；高尿酸尿 → allopurinol；高鈣尿 → thiazide（劑量待查）</li></ul>
+<div class="src">出處：AUA 結石藥物處置指引（版本待查）；EAU Urolithiasis</div></details>
+</section>
+
+<section id="psa">
+<h2>PSA 偏高</h2>
+<details open><summary>先排除暫時性因素，再重測</summary><ul>
+<li>泌尿道感染、前列腺炎、近期導尿或器械、近期射精、劇烈運動</li>
+<li>5-ARI 使用者：PSA 約下降一半，判讀時須校正 <span class="chk">待核對</span></li>
+<li>無急性感染下，間隔數週重測 <span class="chk">待核對</span></li></ul>
+<div class="src">出處：EAU Prostate Cancer（版本待查）；AUA/SUO 早期偵測指引（版本待查）</div></details>
+<details><summary>評估風險</summary><ul>
+<li>DRE、年齡、家族史（含 BRCA 等遺傳風險）、種族</li>
+<li>PSA 密度（PSA ÷ 前列腺體積）：常用 0.15 為參考點 <span class="chk">待核對</span></li>
+<li>PSA 切點無單一絕對值，常用 3 ng/mL 作為考慮進一步評估的參考 <span class="chk">待核對</span></li>
+<li>可用風險計算工具輔助（如 ERSPC、PCPT；版本待查）</li>
+<li>共同決策：說明篩檢的好處與過度診斷風險</li></ul></details>
+<details><summary>切片前與切片</summary><ul>
+<li>建議切片前先做多參數 MRI；PI-RADS 3–5 做標靶切片，視情況加系統性切片</li>
+<li>經會陰切片可降低感染風險，指引傾向優先考慮</li>
+<li>低風險癌症：可考慮主動監測</li></ul>
+<div class="src">出處：EAU Prostate Cancer；AUA/SUO（章節與等級待查）</div></details>
+<div class="red"><b>注意</b><ul><li>PSA 很高、DRE 硬結、骨痛、血尿、腎功能惡化 → 提早轉介或進一步檢查</li></ul></div>
+</section>
+
+<section id="bph">
+<h2>BPH 與下泌尿道症狀（LUTS）</h2>
+<details open><summary>評估</summary><ul>
+<li>IPSS（症狀分數）、生活品質分數、排尿日誌（夜尿者必做）</li>
+<li>尿液檢查、DRE、腎功能（視情況）</li>
+<li>PSA：預期壽命夠長且會改變處置時才檢查</li>
+<li>尿流速（Qmax）、餘尿（PVR）、前列腺超音波／體積</li></ul>
+<div class="src">出處：EAU Non-neurogenic Male LUTS；AUA BPH 指引（版本待查）</div></details>
+<details><summary>藥物（依症狀與前列腺大小選擇）</summary><ul>
+<li><b>α-blocker</b>（tamsulosin、silodosin、alfuzosin、doxazosin）：起效快；副作用：姿勢性低血壓、射精異常；<b>白內障手術前須告知（IFIS）</b>。tamsulosin 常用 0.2–0.4 mg 每日一次 <span class="chk">待核對</span></li>
+<li><b>5-ARI</b>（finasteride 5 mg、dutasteride 0.5 mg 每日）：用於前列腺較大者（常見切點約 30–40 mL 或 PSA 約 1.4–1.5）<span class="chk">待核對</span>；約 6 個月起效；性功能副作用；PSA 約減半</li>
+<li><b>PDE5 抑制劑</b>（tadalafil 5 mg 每日）：LUTS 合併 ED 時考慮 <span class="chk">待核對</span></li>
+<li><b>抗膽鹼／β3 agonist</b>（mirabegron 等）：以儲尿症狀為主者；抗膽鹼注意餘尿與口乾便秘，mirabegron 注意血壓 <span class="chk">待核對</span></li>
+<li><b>併用</b>：α-blocker + 5-ARI（前列腺大且進展風險高者）；α-blocker + 抗膽鹼（儲尿症狀持續者）</li>
+<li>夜多尿：須先確認夜間尿量；desmopressin 注意低血鈉與年齡，使用前後查鈉 <span class="chk">待核對</span></li>
+<li>生活調整：減少睡前水分、咖啡因與酒精</li></ul>
+<div class="src">出處：EAU Non-neurogenic Male LUTS；AUA BPH 指引（劑量與等級待查，台灣仿單為準）</div></details>
+<details><summary>手術指徵與選項</summary><ul>
+<li>藥物治療失敗或不耐受</li><li>反覆尿滯留、反覆 UTI、膀胱結石、藥物無效的反覆血尿</li><li>因下泌尿道阻塞造成腎功能受損</li>
+<li>選項：TURP、HoLEP 等，依前列腺大小與設備選擇 <span class="chk">待核對</span></li></ul></details>
+<div class="red"><b>需注意</b><ul><li>急性尿滯留</li><li>肉眼血尿</li><li>反覆發燒或感染</li><li>腎功能異常、神經學症狀（須排除神經性膀胱）</li></ul></div>
+</section>
+
+<section id="sex">
+<h2>性功能障礙</h2>
+<details open><summary>勃起功能障礙（ED）評估</summary><ul>
+<li>病史：發生方式、情境（心因或器質）、用藥、抽菸、酒精；問卷 IIEF-5 / SHIM</li>
+<li>ED 可能是心血管疾病的預警：評估心血管風險，必要時轉介</li>
+<li>檢查：血壓、血糖、血脂；有性慾低落或症狀者查晨間總睪固酮</li>
+<li>生活型態：運動、減重、戒菸、控制三高</li></ul>
+<div class="src">出處：EAU Sexual and Reproductive Health；AUA ED 指引（版本待查）</div></details>
+<details><summary>治療階梯</summary><ul>
+<li><b>PDE5 抑制劑（第一線）</b>：sildenafil、tadalafil、vardenafil、avanafil</li>
+<li>常見劑量：sildenafil 25–100 mg、tadalafil 10–20 mg（或每日 2.5–5 mg）、vardenafil 5–20 mg、avanafil 50–200 mg <span class="chk">待核對（以仿單為準）</span></li>
+<li>副作用：頭痛、臉潮紅、消化不良、鼻塞；罕見視力異常</li>
+<li><b>絕對禁忌：併用硝酸鹽類（nitrates）</b>；併用 α-blocker 注意低血壓；riociguat 禁用</li>
+<li>二線：真空吸引器、海綿體內注射（alprostadil）</li>
+<li>三線：陰莖假體</li>
+<li>低能量體外震波：研究中，是否推薦待查</li></ul></details>
+<details><summary>早洩與低睪固酮</summary><ul>
+<li><b>早洩</b>：終生型常以插入後射精潛伏期約 1 分鐘內為定義 <span class="chk">待核對</span>；選項：行為療法、局部麻醉劑、dapoxetine、SSRI（部分為適應症外使用）</li>
+<li><b>低睪固酮</b>：有症狀且兩次晨間總睪固酮偏低才考慮補充；切點各指引不同（AUA 約 300 ng/dL；EAU 另有標準）<span class="chk">待核對</span></li>
+<li>補充前評估：前列腺癌風險、PSA 與 DRE、血比容、生育需求（補充會抑制精子生成）</li></ul>
+<div class="src">出處：ISSM 早洩共識；AUA 睪固酮缺乏指引；EAU（版本待查）</div></details>
+<div class="red"><b>急症與警訊</b><ul><li>勃起超過 4 小時（缺血型陰莖異常勃起）→ 急診處理</li><li>年輕突發 ED 或外傷後 ED</li><li>陰莖彎曲或硬塊（Peyronie）→ 追蹤</li></ul></div>
+</section>
+
+<footer>草稿建立：2026-11-09。核對完成的項目請移除「待核對」標記，並寫上實際出處與版本。</footer>
+</main>
+</body>
+</html>
