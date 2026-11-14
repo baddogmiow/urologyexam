@@ -6,12 +6,13 @@
 | 角色 | 模型 | 通道 | 用途 |
 |---|---|---|---|
 | draft | deepseek/deepseek-v4.1-flash | OpenRouter | 大量詳解草稿、格式轉換（最便宜） |
-| read | gemini-3.5-flash | Gemini API 直連 | 長文閱讀、摘要、pptx/pdf 文字整理 |
+| read | agy（Antigravity CLI 1.5.8） | 本機 `agy -p` 非互動模式（2026-11-14 起取代 Gemini API） | 長文閱讀、摘要、pptx/pdf 文字整理 |
 | second | x-ai/grok-4.3 | OpenRouter | 第二意見、替代答案 |
 | check | openai/gpt-5.5 | OpenRouter | 交叉核對、找矛盾 |
 | alt | qwen/qwen3.7-plus | OpenRouter | 中文潤飾、備援 |
 
-- OpenRouter 金鑰額度上限 US$100（測試時已用 $0）；金鑰由 proxy 注入，**不要寫進 repo**。
+- OpenRouter 金鑰額度上限 US$100（測試時已用 $0）；雲端環境金鑰由 proxy 注入；本機讀環境變數（見下一條）；read 角色用 agy，不需 Gemini 金鑰，**不要寫進 repo**。
+- 本機（Windows）：金鑰讀環境變數 `OPENROUTER_API_KEY`（不寫進 repo）；agy 路徑 `%LOCALAPPDATA%\agy\bin\agy.exe`（可用 `AGY_EXE` 覆寫），中文輸出需 UTF-8，腳本已處理。GitHub Models 已於 2026-07-30 停用，不使用。
 - 模型 ID 常被下架（gemini-2.5-flash、grok-4-fast、qwen3-235b 都已 404）。失敗先跑 `python3 tools/ai_dispatch.py models` 再改 `tools/ai_dispatch.py` 的 ROLES。
 - 呼叫工具：`tools/ai_dispatch.py <role> -i prompt.txt -o out.md`，輸出自動標「（模型 草稿，待核對）」。
 
