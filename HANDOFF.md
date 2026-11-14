@@ -6,7 +6,7 @@
 ## 目前狀態
 - 更新時間：2026-11-14
 - 更新者：Claude（本機桌面版 session）
-- 分支：`claude/claude-md-handoff`（含 CLAUDE.md、HANDOFF.md，尚未合併、尚未 push）；`main` 已含 5f8a683 並已推到遠端
+- 分支：`claude/claude-md-handoff`、`claude/fix-ai-dispatch-timeout` 的內容已全部合併進 `main` 並推到遠端（168ce49，PR #12 已 merged）
 
 ## 2026-11-14 本機 session 進度
 - `tools/ai_dispatch.py`：`read` 角色改用本機 agy（Antigravity CLI）；長 prompt（>8000 字元）寫暫存檔讓 agy 讀；找不到 agy／逾時顯示中文錯誤；本機讀環境變數 `OPENROUTER_API_KEY`。已驗證（py_compile、短中文、45k 字元長文、draft 角色），已合併 main 並 push（5f8a683）。
@@ -17,7 +17,11 @@
 - 全域 `~/.claude/CLAUDE.md` 的 gy 規則已改為 agy（備份 `CLAUDE.md.bak`）。
 - 未 commit／未處理：本機舊分支 `claude/busy-davinci-d6xmss`（速查手冊，見下）。
 - 竹北租屋排程今日實跑：抓到5筆符合、博愛觀有出租、已寄信（手機推播因 Remote Control 未連線而未送出）。過程中發現並修了 `tools/ai_dispatch.py` 的 bug：`draft`／`second`／`check`／`alt` 等 OpenRouter 角色在模型做內部 reasoning（如 deepseek）時，若 `max_tokens`（原6000）被 reasoning 用完，`content` 會回傳 `null`，但舊版會直接把字面上的 `None` 寫進輸出檔、當成功結案，完全沒發現。已改成：`max_tokens` 提高到16000，且 `content` 為空時改丟 `SystemExit`（明確失敗，附 `finish_reason`），不再靜默吞掉。已驗證：`py_compile` 通過、用當時失敗的同一份長 prompt 重新呼叫 `draft` 角色成功拿到正常內容。分支：`claude/fix-ai-dispatch-timeout`，尚未合併 main。
-- 另外，當天用 `codex exec -s read-only "..." | tail -100` 呼叫 Codex 唯讀稽核，因為 `tail` 要等整個程序結束才有輸出，等了13分鐘看起來像卡死（其實看不到任何中間狀態），逾時後判定失敗、改自己算。這不是 repo 的 bug，是當次呼叫指令下錯；已在 `~/.claude/scheduled-tasks/zhubei-3br-rental-daily/SKILL.md` 加註提醒以後不要接 `| tail`。
+- Codex 唯讀稽核當天連環踩了三個呼叫方式的坑，已全部查清並在重測中驗證修好（不是 repo bug，是呼叫指令下錯，已把下列正確做法寫進 `~/.claude/scheduled-tasks/zhubei-3br-rental-daily/SKILL.md`）：
+  1. 指令接 `| tail -100` 會等程序結束才有輸出，等13分鐘看起來像卡死，其實完全看不到中間狀態。→ 改成輸出導向檔案或不接管線。
+  2. 拿掉 `| tail` 後發現真正卡住的原因：codex 會停在「Reading additional input from stdin...」等不到 EOF。→ bash 下要接 `< /dev/null` 明確關閉 stdin。
+  3. 接著發現就算不卡 stdin，只要 Codex 自己用 `exec_command`（內部的 PowerShell Get-Content）去讀檔案——即使是 repo 工作目錄內的檔案、也加了 `--add-dir`——照樣被外層環境政策擋下（`rejected: blocked by policy`），跟檔案權限無關，重試也沒用。→ 正確做法是把三份暫存檔的純文字**直接貼進 prompt 本文**餵給 Codex（跟餵 OpenRouter／agy 一樣），不要叫它自己去讀檔案；prompt 最後加一句「資料已經全部附在下面，不需要再去讀取任何檔案」。
+  三個都修好後，Codex 實測幾秒內就能跑完，且抓到一個我自己沒發現的小落差（候選1的季繳管理費17,125/3≈5,708，跟列出的月費5,725差50元/季）。
 
 ## 做到哪（2026-11-09）
 - 協作骨架（HANDOFF、roles、cards、drafts、AGENTS 規則）、eager-darwin（AI 分派工具、每週論文摘要、BRAIN）、UTF-8 修正，皆已合併進 main。UTF-8 修正是醫師在雲端 session 明確同意（「合併 utf8」）後才推 main。
