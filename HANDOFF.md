@@ -12,10 +12,12 @@
 - `tools/ai_dispatch.py`：`read` 角色改用本機 agy（Antigravity CLI）；長 prompt（>8000 字元）寫暫存檔讓 agy 讀；找不到 agy／逾時顯示中文錯誤；本機讀環境變數 `OPENROUTER_API_KEY`。已驗證（py_compile、短中文、45k 字元長文、draft 角色），已合併 main 並 push（5f8a683）。
 - 新增根目錄 `CLAUDE.md`：多引擎分工（Claude／OpenRouter／agy／Codex）、品質關卡、對話負擔預警（15 輪／8 檔／500 行）。
 - 引擎狀態：OpenRouter 可用；agy 可用；Codex 已登入 ChatGPT 官方帳號，但工作區唯讀，改檔與跑指令失敗，需醫師開放沙盒寫入才能派工。GitHub Models 已於 2026-07-30 停用；Gemini API 已不用。
-- 桌面版目前走閘道模式（`~/.claude/settings.json` 的 `ANTHROPIC_BASE_URL` 等指向 127.0.0.1:3456）；是否還原為一般登入未決定。
+- 桌面版目前走閘道模式（`~/.claude/settings.json` 的 `ANTHROPIC_BASE_URL` 等指向 127.0.0.1:3456）；2026-11-14 已決定改回一般登入：已移除 `apiKeyHelper` 與閘道 env，備份在 `~/.claude/settings.json.gateway.bak`；需完全關閉並重開桌面版後生效，重開後請確認登入帳號（若出現舊的 ANTHROPIC_* 使用者環境變數需另行清除）。
 - 竹北租屋每日排程（`zhubei-3br-rental-daily`，本機排程，12:00）已加 OpenRouter／agy 可選步驟；尚未在新版指令下實跑，Gmail 寄信與手機推播的首次核准未驗證。
 - 全域 `~/.claude/CLAUDE.md` 的 gy 規則已改為 agy（備份 `CLAUDE.md.bak`）。
 - 未 commit／未處理：本機舊分支 `claude/busy-davinci-d6xmss`（速查手冊，見下）。
+- 竹北租屋排程今日實跑：抓到5筆符合、博愛觀有出租、已寄信（手機推播因 Remote Control 未連線而未送出）。過程中發現並修了 `tools/ai_dispatch.py` 的 bug：`draft`／`second`／`check`／`alt` 等 OpenRouter 角色在模型做內部 reasoning（如 deepseek）時，若 `max_tokens`（原6000）被 reasoning 用完，`content` 會回傳 `null`，但舊版會直接把字面上的 `None` 寫進輸出檔、當成功結案，完全沒發現。已改成：`max_tokens` 提高到16000，且 `content` 為空時改丟 `SystemExit`（明確失敗，附 `finish_reason`），不再靜默吞掉。已驗證：`py_compile` 通過、用當時失敗的同一份長 prompt 重新呼叫 `draft` 角色成功拿到正常內容。分支：`claude/fix-ai-dispatch-timeout`，尚未合併 main。
+- 另外，當天用 `codex exec -s read-only "..." | tail -100` 呼叫 Codex 唯讀稽核，因為 `tail` 要等整個程序結束才有輸出，等了13分鐘看起來像卡死（其實看不到任何中間狀態），逾時後判定失敗、改自己算。這不是 repo 的 bug，是當次呼叫指令下錯；已在 `~/.claude/scheduled-tasks/zhubei-3br-rental-daily/SKILL.md` 加註提醒以後不要接 `| tail`。
 
 ## 做到哪（2026-11-09）
 - 協作骨架（HANDOFF、roles、cards、drafts、AGENTS 規則）、eager-darwin（AI 分派工具、每週論文摘要、BRAIN）、UTF-8 修正，皆已合併進 main。UTF-8 修正是醫師在雲端 session 明確同意（「合併 utf8」）後才推 main。

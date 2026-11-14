@@ -78,8 +78,15 @@ def call(role, prompt, system=None):
         text = "".join(p.get("text", "") for p in d["candidates"][0]["content"]["parts"])
     else:
         msgs = ([{"role": "system", "content": system}] if system else []) + [{"role": "user", "content": prompt}]
-        d = post("https://openrouter.ai/api/v1/chat/completions", {"model": model, "messages": msgs, "max_tokens": 6000})
-        text = d["choices"][0]["message"]["content"]
+        # max_tokens 16000：部分模型（如 deepseek）會先輸出看不見的 reasoning 再輸出 content，
+        # 6000 太小時 reasoning 會把額度耗盡，導致 content 被截成 null（見 HANDOFF.md 2026-11-14）。
+        d = post("https://openrouter.ai/api/v1/chat/completions", {"model": model, "messages": msgs, "max_tokens": 16000})
+        choice = d["choices"][0]
+        text = choice["message"]["content"]
+        if not text:
+            # 不要把空內容當成功寫出檔案（之前會靜默寫出字面上的「None」），改成明確失敗讓呼叫端重試或自行處理。
+            reason = choice.get("finish_reason", "unknown")
+            raise SystemExit(f"OpenRouter 回傳空內容（finish_reason={reason}），可能是模型下架或 reasoning 把 max_tokens 用完，請改用 `python tools/ai_dispatch.py models` 確認模型是否還在架上。")
     return f"（{model} 草稿，待核對）\n{text}\n"
 
 def main():
